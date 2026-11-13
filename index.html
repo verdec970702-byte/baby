@@ -1,0 +1,2596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>100 Papis y Mamis Dijeron - Baby Shower (Doble Pantalla Sincronizada)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PeerJS Cloud WebRTC for Automatic Phone-to-Laptop Sync on Netlify -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <!-- Google Fonts: Fredoka (festive TV/Baby Shower) & Orbitron (LED Scoreboards) & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;600;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --gold-light: #fef08a;
+            --gold-main: #facc15;
+            --gold-dark: #ca8a04;
+            --board-blue-dark: #091536;
+            --board-blue-mid: #142c6e;
+            --board-blue-light: #1e40af;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at 50% 15%, #1e3a8a 0%, #0f172a 55%, #060b19 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        .font-show {
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        .font-led {
+            font-family: 'Orbitron', monospace;
+        }
+
+        /* Festive Studio LED Background Grid */
+        .studio-bg {
+            background-image: 
+                radial-gradient(rgba(250, 204, 21, 0.14) 2px, transparent 2px),
+                radial-gradient(rgba(56, 189, 248, 0.1) 2px, transparent 2px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+        }
+
+        /* Glowing Gold Frame for the Main Board */
+        .tv-board-frame {
+            background: linear-gradient(145deg, #172554 0%, #0b132b 100%);
+            border: 5px solid #facc15;
+            box-shadow: 
+                0 0 30px rgba(250, 204, 21, 0.45),
+                inset 0 0 35px rgba(30, 58, 138, 0.9);
+            position: relative;
+        }
+
+        /* Animated Marquee Bulbs around Header */
+        .bulb-strip {
+            background-image: radial-gradient(circle, #fef08a 35%, #f59e0b 55%, transparent 65%);
+            background-size: 24px 24px;
+            animation: bulbChase 1.2s infinite linear;
+        }
+
+        @keyframes bulbChase {
+            0% { background-position: 0 0; opacity: 0.9; }
+            50% { background-position: 12px 0; opacity: 1; }
+            100% { background-position: 24px 0; opacity: 0.9; }
+        }
+
+        /* LED Digital Score Display */
+        .led-screen {
+            background: #050811;
+            border: 3px solid #eab308;
+            box-shadow: 
+                inset 0 0 18px rgba(234, 179, 8, 0.35),
+                0 6px 20px rgba(0, 0, 0, 0.6);
+            text-shadow: 0 0 14px rgba(250, 204, 21, 0.9);
+        }
+
+        /* 3D Flip Card for Answer Slots */
+        .slot-perspective {
+            perspective: 1200px;
+        }
+
+        .slot-inner {
+            position: relative;
+            width: 100%;
+            height: 74px;
+            transition: transform 0.65s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-style: preserve-3d;
+        }
+
+        @media (min-width: 768px) {
+            .slot-inner {
+                height: 84px;
+            }
+        }
+
+        .slot-inner.flipped {
+            transform: rotateX(180deg);
+        }
+
+        .slot-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border-radius: 0.9rem;
+        }
+
+        /* Unrevealed Front Face */
+        .slot-front {
+            background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 48%, #1e3a8a 100%);
+            border: 3px solid #93c5fd;
+            box-shadow: 
+                inset 0 2px 6px rgba(255, 255, 255, 0.4),
+                0 6px 14px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Revealed Back Face */
+        .slot-back {
+            background: linear-gradient(180deg, #fef08a 0%, #facc15 20%, #eab308 85%, #ca8a04 100%);
+            border: 3px solid #ffffff;
+            transform: rotateX(180deg);
+            color: #0f172a;
+            box-shadow: 
+                0 0 25px rgba(250, 204, 21, 0.8),
+                inset 0 2px 8px rgba(255, 255, 255, 0.85);
+        }
+
+        /* Top #1 Answer Special Glow */
+        .slot-back.rank-one {
+            background: linear-gradient(180deg, #ffffff 0%, #fde047 25%, #f59e0b 90%);
+            border: 3px solid #fef08a;
+            box-shadow: 0 0 35px rgba(250, 204, 21, 1);
+        }
+
+        /* Number Oval inside unrevealed card */
+        .number-oval {
+            background: radial-gradient(circle, #172554 0%, #090d16 100%);
+            border: 3px solid #facc15;
+            box-shadow: 0 0 12px rgba(250, 204, 21, 0.6);
+        }
+
+        /* Screen Shake when Red X triggers */
+        @keyframes shakeScreen {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            15% { transform: translate(-12px, -6px) rotate(-1.5deg); }
+            30% { transform: translate(12px, 6px) rotate(1.5deg); }
+            45% { transform: translate(-10px, 6px) rotate(-1deg); }
+            60% { transform: translate(10px, -6px) rotate(1deg); }
+            75% { transform: translate(-6px, 3px) rotate(-0.5deg); }
+        }
+
+        .shake-active {
+            animation: shakeScreen 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+        }
+
+        /* Giant Red X Pop Animation */
+        @keyframes popStrike {
+            0% { transform: scale(0.2) rotate(-15deg); opacity: 0; }
+            60% { transform: scale(1.15) rotate(4deg); opacity: 1; }
+            80% { transform: scale(0.95) rotate(-2deg); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        .strike-x-box {
+            animation: popStrike 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            background: radial-gradient(circle, #7f1d1d 0%, #450a0a 100%);
+            border: 8px solid #ef4444;
+            box-shadow: 
+                0 0 60px rgba(239, 68, 68, 0.95),
+                inset 0 0 30px rgba(239, 68, 68, 0.6);
+        }
+
+        /* Popular #1 Answer Banner Pulse */
+        @keyframes pulseGold {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.06); }
+        }
+
+        .pulse-badge {
+            animation: pulseGold 1.6s infinite ease-in-out;
+        }
+
+        /* Active Team Glow on TV Scoreboard */
+        .team-active-glow-pink {
+            box-shadow: 0 0 45px rgba(244, 114, 182, 0.85), inset 0 0 25px rgba(244, 114, 182, 0.35) !important;
+            border-color: #f472b6 !important;
+            transform: scale(1.02);
+        }
+
+        .team-active-glow-blue {
+            box-shadow: 0 0 45px rgba(56, 189, 248, 0.85), inset 0 0 25px rgba(56, 189, 248, 0.35) !important;
+            border-color: #38bdf8 !important;
+            transform: scale(1.02);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3b82f6;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #60a5fa;
+        }
+    </style>
+</head>
+<body class="studio-bg flex flex-col min-h-screen relative">
+
+    <!-- Confetti Canvas for Celebrations -->
+    <canvas id="confettiCanvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
+
+    <!-- GIANT RED X OVERLAY (1, 2, or 3 X's like the TV Show) -->
+    <div id="strikeOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex-col items-center justify-center p-4">
+        <div id="strikeBoxesContainer" class="flex flex-wrap items-center justify-center gap-6 md:gap-10">
+            <!-- Dynamically injected 1, 2, or 3 Giant Red X boxes -->
+        </div>
+        <div id="strikeOverlaySubtitle" class="mt-6 text-2xl md:text-4xl font-show font-bold text-red-400 tracking-wider uppercase drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)] text-center">
+            ¡RESPUESTA NO ENCONTRADA EN EL TABLERO!
+        </div>
+    </div>
+
+    <!-- TOP ANSWER (#1 POPULAR) CELEBRATION TOAST -->
+    <div id="topAnswerBanner" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 hidden pointer-events-none">
+        <div class="bg-gradient-to-r from-amber-500 via-yellow-300 to-amber-500 text-slate-950 font-show font-extrabold px-8 py-4 rounded-full shadow-[0_0_50px_rgba(250,204,21,1)] border-4 border-white flex items-center gap-3 text-xl md:text-3xl animate-bounce">
+            <span>👑</span>
+            <span>¡LA RESPUESTA #1 MÁS POPULAR!</span>
+            <span>🍼</span>
+        </div>
+    </div>
+
+    <!-- PHYSICAL BUZZER WINNER OVERLAY (WHO PRESSED FIRST!) -->
+    <div id="buzzerWinnerOverlay" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex-col items-center justify-center p-4 pointer-events-none">
+        <div id="buzzerWinnerCard" class="max-w-2xl w-full rounded-3xl p-8 border-4 text-center shadow-2xl transform transition-all">
+            <div class="text-5xl sm:text-7xl mb-3 animate-bounce">⚡🔔⚡</div>
+            <div class="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-yellow-300 mb-2">
+                ¡DUELO DE BOTONES EN VIVO!
+            </div>
+            <h2 id="buzzerWinnerTitle" class="font-show text-3xl sm:text-5xl font-black text-white leading-tight">
+                ¡APRETÓ PRIMERO: EQUIPO MAMÁ!
+            </h2>
+            <p id="buzzerWinnerParticipant" class="font-show text-xl sm:text-2xl font-bold text-yellow-200 mt-2">
+                ¡Tiene la palabra para responder!
+            </p>
+        </div>
+    </div>
+
+    <!-- GENERAL STATUS TOAST -->
+    <div id="toastMessage" class="fixed bottom-5 right-5 z-50 hidden bg-slate-900/95 border-2 border-yellow-400 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 transition-all duration-300">
+        <i id="toastIcon" class="fa-solid fa-circle-info text-yellow-400 text-xl"></i>
+        <span id="toastText" class="font-semibold text-sm md:text-base">Mensaje</span>
+    </div>
+
+    <!-- ==================== LAUNCH SCREEN SELECTOR MODAL ==================== -->
+    <div id="modeSelectorModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-40 hidden items-center justify-center p-4 overflow-y-auto">
+        <div class="max-w-4xl w-full bg-slate-900 border-2 border-yellow-400 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(250,204,21,0.3)] my-auto">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-pink-500/20 border border-pink-400/50 text-pink-200 text-xs font-bold uppercase tracking-widest mb-2">
+                    🍼 Edición Especial Baby Shower • Doble Pantalla Sincronizada
+                </div>
+                <h1 class="font-show text-3xl sm:text-5xl font-bold bg-gradient-to-r from-yellow-200 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
+                    100 PAPIS Y MAMIS DIJERON
+                </h1>
+                <p class="text-slate-300 text-sm sm:text-base mt-2 max-w-2xl mx-auto">
+                    Elige qué pantalla quieres abrir en esta ventana. Ambas pantallas se sincronizan automáticamente en tiempo real.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <!-- Option A: Public TV Board -->
+                <div class="bg-gradient-to-b from-blue-950/90 to-slate-950 border-2 border-sky-400 hover:border-yellow-400 rounded-3xl p-6 flex flex-col justify-between transition group shadow-xl">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="w-14 h-14 rounded-2xl bg-sky-500/20 border border-sky-400 flex items-center justify-center text-3xl">
+                                📺
+                            </span>
+                            <span class="px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 font-bold text-xs uppercase">
+                                Para Proyector / TV / Invitados
+                            </span>
+                        </div>
+                        <h2 class="font-show text-2xl font-bold text-white mb-2 group-hover:text-yellow-300 transition">
+                            1. Pantalla Tablero Público
+                        </h2>
+                        <p class="text-sm text-slate-300 leading-relaxed mb-4">
+                            Muestra <strong>únicamente el tablero gigante del concurso</strong>, marcadores, puntos y efectos de sonido. <strong>No muestra la chuleta</strong> ni lo que escribes para que ningún invitado haga trampa.
+                        </p>
+                    </div>
+                    <button onclick="switchScreenMode('tablero')" class="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-show font-extrabold text-lg shadow-lg transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-tv"></i>
+                        <span>Abrir Tablero Público aquí</span>
+                    </button>
+                </div>
+
+                <!-- Option B: Host Remote & Cheat Sheet -->
+                <div class="bg-gradient-to-b from-indigo-950/90 to-slate-950 border-2 border-amber-400 hover:border-yellow-300 rounded-3xl p-6 flex flex-col justify-between transition group shadow-xl">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400 flex items-center justify-center text-3xl">
+                                🎤
+                            </span>
+                            <span class="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 font-bold text-xs uppercase">
+                                Para tu Laptop o Celular
+                            </span>
+                        </div>
+                        <h2 class="font-show text-2xl font-bold text-white mb-2 group-hover:text-yellow-300 transition">
+                            2. Panel del Presentador (Chuleta)
+                        </h2>
+                        <p class="text-sm text-slate-300 leading-relaxed mb-4">
+                            Tu control remoto privado: lee las preguntas, ve <strong>todas las respuestas ocultas de la chuleta</strong> con sus puntos y escribe lo que digan los invitados para voltear casillas o lanzar la ❌ en la TV.
+                        </p>
+                    </div>
+                    <button onclick="switchScreenMode('presentador')" class="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-slate-950 font-show font-extrabold text-lg shadow-lg transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-user-secret"></i>
+                        <span>Abrir Panel del Presentador aquí</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dual Window Quick Launch Tip -->
+            <div class="mt-6 bg-slate-950/90 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3 text-xs sm:text-sm text-slate-300">
+                    <i class="fa-solid fa-bolt text-yellow-400 text-xl shrink-0"></i>
+                    <span>
+                        <strong>¿Conectaste tu laptop a una TV por HDMI?</strong> Abre aquí el Tablero Público para arrastrarlo a la TV, y abre la Chuleta del Presentador en una ventana aparte con un clic.
+                    </span>
+                </div>
+                <button onclick="openBoardHereAndHostPopup()" class="shrink-0 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow transition flex items-center gap-2">
+                    <i class="fa-solid fa-up-right-from-square"></i>
+                    <span>Abrir Ambas Ventanas Ahora</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== TOP DISCREET NAVIGATION & SYNC BAR ==================== -->
+    <header class="w-full bg-slate-950/95 border-b-2 border-yellow-500/60 backdrop-blur-md sticky top-0 z-30">
+        <div class="h-1.5 w-full bulb-strip"></div>
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2">
+            
+            <!-- Left: Title & Current Mode Badge -->
+            <div class="flex items-center gap-2.5">
+                <button onclick="openModeSelectorModal()" title="Cambiar modo de pantalla" class="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-400 via-purple-500 to-sky-400 p-0.5 shadow flex items-center justify-center hover:scale-105 transition">
+                    <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center text-xl">
+                        🍼
+                    </div>
+                </button>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-show text-base sm:text-xl font-bold tracking-wide bg-gradient-to-r from-yellow-200 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
+                            100 PAPIS Y MAMIS DIJERON
+                        </h1>
+                        <span id="currentViewBadge" class="text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-400 text-sky-200">
+                            📺 VISTA TABLERO
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-3 text-[11px] text-slate-300">
+                        <span id="syncStatusBadge" class="inline-flex items-center gap-1.5 text-emerald-400 font-semibold">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            🟢 Conectando Sala...
+                        </span>
+                        <button onclick="openCloudModal()" id="roomCodeBadge" class="text-yellow-300 hover:text-yellow-200 font-mono font-bold underline decoration-dotted">
+                            Sala: BABY-2026
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Mode Switcher, Popup Launcher, Cloud Setup & Audio -->
+            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <!-- Switch Mode Tabs -->
+                <div class="flex items-center bg-slate-900 border border-slate-700 rounded-xl p-1 text-xs font-bold">
+                    <button id="tabBtnTablero" onclick="switchScreenMode('tablero')" class="px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-tv"></i>
+                        <span class="hidden md:inline">Tablero TV</span>
+                    </button>
+                    <button id="tabBtnPresentador" onclick="switchScreenMode('presentador')" class="px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-microphone-lines"></i>
+                        <span class="hidden md:inline">Chuleta Presentador</span>
+                    </button>
+                </div>
+
+                <!-- Launch Companion Window Button -->
+                <button id="openPopupCompanionBtn" onclick="openCompanionWindow()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition flex items-center gap-1.5" title="Abre la otra vista en una ventana nueva lista para arrastrar a tu otro monitor">
+                    <i class="fa-solid fa-up-right-from-square"></i>
+                    <span id="openPopupCompanionText">🚀 Abrir Control del Presentador en Ventana Aparte</span>
+                </button>
+
+                <!-- Cloud / Room Config Modal Button (Netlify & Mobile Remote) -->
+                <button onclick="openCloudModal()" class="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-sky-300 font-semibold text-xs transition flex items-center gap-1.5" title="Configurar Sala o Firebase para usar celular como control remoto en Netlify">
+                    <i class="fa-solid fa-cloud"></i>
+                    <span class="hidden lg:inline">Sala / Celular</span>
+                </button>
+
+                <!-- Mute / Audio Unlock Button -->
+                <button id="muteToggleBtn" title="Activar/Silenciar Efectos de Sonido" class="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-yellow-400 transition flex items-center gap-1.5 text-xs font-bold">
+                    <i id="muteIcon" class="fa-solid fa-volume-high"></i>
+                    <span id="audioBtnLabel" class="hidden sm:inline">Audio Activo</span>
+                </button>
+
+                <!-- Fullscreen Toggle (Useful for TV Board) -->
+                <button onclick="toggleFullScreen()" title="Pantalla Completa para TV / Proyector" class="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 transition text-xs">
+                    <i class="fa-solid fa-expand"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ================================================================================== -->
+    <!-- VISTA 1: 📺 PANTALLA TABLERO PÚBLICO (EXCLUSIVA PARA PROYECTOR / TV / INVITADOS)   -->
+    <!-- ================================================================================== -->
+    <main id="viewTableroPublico" class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 flex flex-col justify-center">
+        <div id="mainStageContainer" class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch my-auto">
+
+            <!-- TEAM 1 SCOREBOARD (Left) -->
+            <div id="tvTeam1Card" class="lg:col-span-3 bg-gradient-to-b from-pink-950/85 via-slate-900/95 to-slate-950 border-2 border-pink-400/80 rounded-3xl p-5 flex flex-col justify-between shadow-[0_0_30px_rgba(244,114,182,0.25)] transition-all duration-300">
+                <div class="text-center">
+                    <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-pink-500/30 text-pink-200 border border-pink-400/40 text-xs font-bold uppercase tracking-wider mb-3">
+                        <span>💖 Equipo 1</span>
+                    </div>
+
+                    <!-- Editable Team 1 Name -->
+                    <input id="tvTeam1NameInput" type="text" value="Equipo Mamá 💖" aria-label="Nombre del Equipo 1"
+                        class="w-full bg-transparent border-b border-transparent hover:border-pink-400/50 focus:border-pink-400 focus:bg-slate-900/60 rounded px-1 py-1 font-show text-2xl sm:text-3xl font-bold text-pink-200 text-center focus:outline-none transition" />
+                    <div id="tvTeam1PlayerBadge" class="text-xs font-bold text-pink-300/90 mt-1 min-h-[18px]"></div>
+                </div>
+
+                <!-- Team 1 LED Score -->
+                <div class="led-screen rounded-3xl py-6 px-4 my-4 text-center">
+                    <div id="tvTeam1ScoreDisplay" class="font-led text-5xl sm:text-6xl font-black text-yellow-400 tracking-wider">
+                        0
+                    </div>
+                    <div class="text-xs uppercase tracking-widest text-yellow-200/70 font-bold mt-2">
+                        Puntos
+                    </div>
+                </div>
+
+                <!-- Active Turn Indicator Pill (Starts Neutral!) -->
+                <div id="tvTeam1TurnPill" class="py-2.5 px-3 rounded-2xl bg-slate-900/90 border border-slate-700 text-slate-400 font-show font-bold text-sm text-center transition-all">
+                    ⏳ Esperando Botón
+                </div>
+            </div>
+
+            <!-- CENTER TV BOARD (Questions, 5 Slots, Pot & Strikes) -->
+            <div class="lg:col-span-6 tv-board-frame rounded-3xl p-4 sm:p-6 flex flex-col justify-between">
+                
+                <!-- Top Row inside Board: Round Pot LED + Multiplier Badge -->
+                <div class="flex flex-col items-center mb-3">
+                    <div class="flex items-center flex-wrap justify-center gap-2 mb-1.5">
+                        <span id="tvRoundNumberBadge" class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-sky-500/20 border border-sky-400/50 text-sky-200 uppercase">
+                            Ronda 1
+                        </span>
+                        <span id="tvTurnBannerPill" class="px-3 py-0.5 rounded-full text-xs font-extrabold bg-amber-500/20 border border-amber-400 text-amber-200 uppercase">
+                            ⚡ Duelo de Botones (Sin turno asignado)
+                        </span>
+                        <span id="tvMultiplierBadge" class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-yellow-400 text-slate-950 shadow">
+                            NORMAL (x1)
+                        </span>
+                    </div>
+                    <div class="led-screen rounded-2xl px-10 py-2.5 min-w-[200px] text-center">
+                        <span id="tvRoundPotDisplay" class="font-led text-4xl sm:text-5xl font-black text-yellow-300 tracking-widest">
+                            0
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Current Question Banner on TV -->
+                <div class="bg-slate-900/95 border-2 border-sky-400/70 rounded-2xl p-3.5 sm:p-4 mb-4 shadow-inner text-center">
+                    <h2 id="tvQuestionTextDisplay" class="font-show text-lg sm:text-2xl font-bold text-white leading-snug">
+                        ¿Qué es lo primero que compran los papás cuando saben que viene el bebé?
+                    </h2>
+                </div>
+
+                <!-- THE 5 ANSWER SLOTS (No Spoilers!) -->
+                <div id="tvBoardSlotsGrid" class="grid grid-cols-1 gap-3 my-1">
+                    <!-- Rendered dynamically via JS -->
+                </div>
+
+                <!-- STRIKES INDICATOR BAR ON TV (X X X) -->
+                <div class="mt-4 pt-3 border-t border-slate-700/80 flex items-center justify-center gap-4">
+                    <span class="text-xs font-extrabold uppercase tracking-widest text-slate-300">Strikes:</span>
+                    <div id="tvStrikePip1" class="w-11 h-11 rounded-2xl bg-slate-900 border-2 border-slate-700 flex items-center justify-center font-show font-black text-2xl text-slate-700 transition-all">
+                        ✕
+                    </div>
+                    <div id="tvStrikePip2" class="w-11 h-11 rounded-2xl bg-slate-900 border-2 border-slate-700 flex items-center justify-center font-show font-black text-2xl text-slate-700 transition-all">
+                        ✕
+                    </div>
+                    <div id="tvStrikePip3" class="w-11 h-11 rounded-2xl bg-slate-900 border-2 border-slate-700 flex items-center justify-center font-show font-black text-2xl text-slate-700 transition-all">
+                        ✕
+                    </div>
+                    <span id="tvStealModeAlert" class="hidden px-3 py-1.5 rounded-xl bg-red-600 border-2 border-red-300 text-white font-show font-bold text-xs sm:text-sm animate-pulse">
+                        🚨 ¡OPORTUNIDAD DE ROBO!
+                    </span>
+                </div>
+            </div>
+
+            <!-- TEAM 2 SCOREBOARD (Right) -->
+            <div id="tvTeam2Card" class="lg:col-span-3 bg-gradient-to-b from-sky-950/85 via-slate-900/95 to-slate-950 border-2 border-sky-400/80 rounded-3xl p-5 flex flex-col justify-between shadow-[0_0_30px_rgba(56,189,248,0.25)] transition-all duration-300">
+                <div class="text-center">
+                    <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-sky-500/30 text-sky-200 border border-sky-400/40 text-xs font-bold uppercase tracking-wider mb-3">
+                        <span>💙 Equipo 2</span>
+                    </div>
+
+                    <!-- Editable Team 2 Name -->
+                    <input id="tvTeam2NameInput" type="text" value="Equipo Papá 💙" aria-label="Nombre del Equipo 2"
+                        class="w-full bg-transparent border-b border-transparent hover:border-sky-400/50 focus:border-sky-400 focus:bg-slate-900/60 rounded px-1 py-1 font-show text-2xl sm:text-3xl font-bold text-sky-200 text-center focus:outline-none transition" />
+                    <div id="tvTeam2PlayerBadge" class="text-xs font-bold text-sky-300/90 mt-1 min-h-[18px]"></div>
+                </div>
+
+                <!-- Team 2 LED Score -->
+                <div class="led-screen rounded-3xl py-6 px-4 my-4 text-center">
+                    <div id="tvTeam2ScoreDisplay" class="font-led text-5xl sm:text-6xl font-black text-yellow-400 tracking-wider">
+                        0
+                    </div>
+                    <div class="text-xs uppercase tracking-widest text-yellow-200/70 font-bold mt-2">
+                        Puntos
+                    </div>
+                </div>
+
+                <!-- Active Turn Indicator Pill (Starts Neutral!) -->
+                <div id="tvTeam2TurnPill" class="py-2.5 px-3 rounded-2xl bg-slate-900/90 border border-slate-700 text-slate-400 font-show font-bold text-sm text-center transition-all">
+                    ⏳ Esperando Botón
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- ================================================================================== -->
+    <!-- VISTA 2: 🎤 PANEL DEL PRESENTADOR (CHULETA SECRETA + CONTROL REMOTO SINCRONIZADO)  -->
+    <!-- ================================================================================== -->
+    <main id="viewPanelPresentador" class="hidden flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 flex-col gap-4">
+
+        <!-- NEW! PHYSICAL BUZZER DUEL & FAIR TURN CONTROLLER BAR -->
+        <div class="bg-gradient-to-r from-amber-950/90 via-slate-900 to-indigo-950/90 border-2 border-yellow-400 rounded-3xl p-4 sm:p-5 shadow-xl">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="px-3 py-1 rounded-full bg-yellow-400 text-slate-950 font-show font-extrabold text-xs uppercase">
+                        ⚡ Duelo de Botones Físicos (1 vs 1)
+                    </span>
+                    <span id="hostCurrentTurnStatus" class="text-xs sm:text-sm font-bold text-amber-200">
+                        Estado: ⚖️ Turno Neutral (Esperando quién aprieta el botón primero)
+                    </span>
+                </div>
+                <span class="text-[11px] text-slate-300">
+                    Marca quién apretó su botón físico primero para anunciarlo en la TV y darle el turno legalmente
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                <!-- Buzzer 1 (Mamis / Participante 1) -->
+                <div class="md:col-span-5 bg-pink-950/50 border-2 border-pink-400/70 rounded-2xl p-3 flex flex-col gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-pink-200 shrink-0">Participante 1:</span>
+                        <input id="hostPlayer1Input" type="text" placeholder="Ej. Tía Laura (Opcional)" 
+                            class="w-full bg-slate-950/90 border border-pink-400/40 rounded-xl px-2.5 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-pink-400" />
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="triggerBuzzerWin(1)" class="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-show font-extrabold text-xs sm:text-sm shadow-lg active:scale-95 transition flex items-center justify-center gap-1.5">
+                            <span>🔔 ¡Apretó Primero Botón 1!</span>
+                        </button>
+                        <button onclick="setActiveTurn(1)" id="hostTurnBtn1" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-pink-600 text-white font-bold text-xs transition shrink-0" title="Asignar Turno Oficial sin animación de botón">
+                            🎯 Dar Turno
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Center Neutral / Clear Turn Button -->
+                <div class="md:col-span-2 flex flex-col items-center justify-center gap-2">
+                    <button onclick="setActiveTurn(0)" id="hostTurnBtnNeutral" class="w-full py-3 px-3 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 border-2 border-amber-400 text-amber-200 font-show font-extrabold text-xs transition flex flex-col items-center justify-center gap-1 shadow">
+                        <i class="fa-solid fa-scale-balanced text-base"></i>
+                        <span>⚖️ Dejar Neutral</span>
+                        <span class="text-[10px] font-normal opacity-80">(Sin Turno)</span>
+                    </button>
+                </div>
+
+                <!-- Buzzer 2 (Papis / Participante 2) -->
+                <div class="md:col-span-5 bg-sky-950/50 border-2 border-sky-400/70 rounded-2xl p-3 flex flex-col gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-sky-200 shrink-0">Participante 2:</span>
+                        <input id="hostPlayer2Input" type="text" placeholder="Ej. Tío Carlos (Opcional)" 
+                            class="w-full bg-slate-950/90 border border-sky-400/40 rounded-xl px-2.5 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400" />
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="triggerBuzzerWin(2)" class="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-show font-extrabold text-xs sm:text-sm shadow-lg active:scale-95 transition flex items-center justify-center gap-1.5">
+                            <span>🔔 ¡Apretó Primero Botón 2!</span>
+                        </button>
+                        <button onclick="setActiveTurn(2)" id="hostTurnBtn2" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-sky-500 text-white font-bold text-xs transition shrink-0" title="Asignar Turno Oficial sin animación de botón">
+                            🎯 Dar Turno
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOP ROW: QUESTION READER FOR HOST + ROUND / MULTIPLIER CONTROLS -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            
+            <!-- Host Question Reader Card (8 cols) -->
+            <div class="lg:col-span-8 bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-3xl p-5 shadow-xl flex flex-col justify-between gap-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="px-3 py-1 rounded-full bg-amber-400 text-slate-950 font-show font-extrabold text-xs uppercase">
+                            🎤 Tarjeta del Presentador
+                        </span>
+                        <span id="hostRoundLabel" class="text-xs font-bold text-sky-300 bg-sky-500/20 border border-sky-400/40 px-2.5 py-0.5 rounded-full">
+                            Ronda 1 de 10
+                        </span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button id="hostToggleQuestionTvBtn" onclick="toggleQuestionVisibilityOnTv()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold text-yellow-300 transition flex items-center gap-1.5">
+                            <i id="hostQuestionEyeIcon" class="fa-solid fa-eye"></i>
+                            <span id="hostQuestionEyeText">Pregunta Visible en TV</span>
+                        </button>
+                        <button onclick="openQuestionEditor()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                            <span>✏️ Editar / Agregar Preguntas</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Large Question Text for the Host to Read Aloud -->
+                <div class="bg-slate-950/90 border border-slate-800 rounded-2xl p-4">
+                    <div class="text-[11px] uppercase tracking-widest text-slate-400 font-bold mb-1">
+                        Lee esta pregunta a los invitados:
+                    </div>
+                    <h2 id="hostQuestionDisplay" class="font-show text-xl sm:text-2xl md:text-3xl font-bold text-yellow-200 leading-snug">
+                        ¿Qué es lo primero que compran los papás cuando saben que viene el bebé?
+                    </h2>
+                </div>
+
+                <!-- Round Navigation & Multiplier Bar -->
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="changeRoundByStep(-1)" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs sm:text-sm transition flex items-center gap-1">
+                            <i class="fa-solid fa-chevron-left"></i> Anterior
+                        </button>
+                        <select id="hostRoundSelect" aria-label="Seleccionar Ronda" class="bg-slate-950 border border-slate-700 text-yellow-300 font-show font-bold text-xs sm:text-sm rounded-xl px-3 py-2 focus:outline-none">
+                            <!-- Populated via JS -->
+                        </select>
+                        <button onclick="changeRoundByStep(1)" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs sm:text-sm transition flex items-center gap-1">
+                            Siguiente <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+
+                    <!-- Multiplier Selector -->
+                    <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl p-1">
+                        <span class="text-xs font-bold text-slate-400 px-2">Valor:</span>
+                        <button onclick="setMultiplier(1)" data-host-mult="1" class="host-mult-btn px-2.5 py-1 rounded-lg text-xs font-extrabold transition">
+                            Normal x1
+                        </button>
+                        <button onclick="setMultiplier(2)" data-host-mult="2" class="host-mult-btn px-2.5 py-1 rounded-lg text-xs font-extrabold transition">
+                            Dobles x2
+                        </button>
+                        <button onclick="setMultiplier(3)" data-host-mult="3" class="host-mult-btn px-2.5 py-1 rounded-lg text-xs font-extrabold transition">
+                            Triples x3
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Mini TV Status & Score Controller (4 cols) -->
+            <div class="lg:col-span-4 bg-slate-900 border-2 border-slate-700 rounded-3xl p-5 flex flex-col justify-between gap-3 shadow-xl">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-satellite-dish text-emerald-400"></i> Estado en Vivo del Tablero TV
+                    </span>
+                    <span id="hostPotBadge" class="font-led font-black text-lg text-yellow-300 bg-slate-950 px-3 py-0.5 rounded-lg border border-yellow-400/50">
+                        Banco: 0 pts
+                    </span>
+                </div>
+
+                <!-- Mini Team Score Controls -->
+                <div class="grid grid-cols-2 gap-2.5">
+                    <!-- Team 1 Box -->
+                    <div class="bg-pink-950/40 border border-pink-400/50 rounded-2xl p-2.5 text-center">
+                        <input id="hostTeam1NameInput" type="text" value="Equipo Mamá 💖" class="w-full bg-transparent text-center font-show font-bold text-sm text-pink-200 border-b border-transparent focus:border-pink-400 focus:outline-none" />
+                        <div id="hostTeam1Score" class="font-led text-2xl font-black text-yellow-300 my-1">0</div>
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="adjustTeamScore(1, -10)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-bold">-10</button>
+                            <button onclick="adjustTeamScore(1, 10)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-bold">+10</button>
+                        </div>
+                    </div>
+
+                    <!-- Team 2 Box -->
+                    <div class="bg-sky-950/40 border border-sky-400/50 rounded-2xl p-2.5 text-center">
+                        <input id="hostTeam2NameInput" type="text" value="Equipo Papá 💙" class="w-full bg-transparent text-center font-show font-bold text-sm text-sky-200 border-b border-transparent focus:border-sky-400 focus:outline-none" />
+                        <div id="hostTeam2Score" class="font-led text-2xl font-black text-yellow-300 my-1">0</div>
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="adjustTeamScore(2, -10)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-bold">-10</button>
+                            <button onclick="adjustTeamScore(2, 10)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-bold">+10</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Award Round Points to Winner Buttons -->
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="awardPotToTeam(1)" class="py-2 px-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-show font-bold text-xs shadow transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-trophy"></i>
+                        <span>Dar Banco a Eq. 1</span>
+                    </button>
+                    <button onclick="awardPotToTeam(2)" class="py-2 px-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-show font-bold text-xs shadow transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-trophy"></i>
+                        <span>Dar Banco a Eq. 2</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MIDDLE ROW: SMART HOST SEARCH BAR WITH REAL-TIME PREVIEW + STRIKE BUTTONS -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+            
+            <!-- Smart Host Answer Input (7 cols) -->
+            <div class="lg:col-span-7 bg-slate-900 border-2 border-yellow-400 rounded-3xl p-5 shadow-[0_0_25px_rgba(250,204,21,0.18)] flex flex-col justify-between gap-3">
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="font-show font-bold text-lg text-yellow-300 flex items-center gap-2">
+                            <span>⌨️ Buscador Inteligente del Presentador</span>
+                        </h3>
+                        <span class="text-xs text-slate-400">
+                            Nadie ve lo que escribes aquí
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-300 mb-3">
+                        Escribe lo que respondió el invitado. <strong>Antes de dar Enter</strong> verás aquí abajo si coincide con alguna respuesta o si marcará ❌.
+                    </p>
+
+                    <form id="hostAnswerCheckForm" class="flex flex-col sm:flex-row gap-2">
+                        <div class="relative flex-1">
+                            <input 
+                                id="hostGuestAnswerInput" 
+                                type="text" 
+                                autocomplete="off"
+                                placeholder="Escribe la respuesta (ej. pañales, mamila, dormir, abuela)..." 
+                                class="w-full bg-slate-950 border-2 border-sky-400 focus:border-yellow-400 rounded-2xl pl-4 pr-10 py-3.5 text-base sm:text-lg font-bold text-white placeholder-slate-500 focus:outline-none shadow-inner"
+                            />
+                            <button type="button" id="hostClearInputBtn" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                                <i class="fa-solid fa-xmark text-lg"></i>
+                            </button>
+                        </div>
+                        <button type="submit" class="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-300 hover:to-amber-400 text-slate-950 font-show font-extrabold text-base sm:text-lg shadow-lg active:scale-95 transition flex items-center justify-center gap-2 shrink-0">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>Enviar a TV (Enter)</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- LIVE TYPING PREVIEW BOX -->
+                <div id="hostLiveTypingPreview" class="bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs sm:text-sm font-semibold text-slate-300 flex items-center gap-2.5">
+                    <i class="fa-solid fa-wand-magic-sparkles text-yellow-400 text-base"></i>
+                    <span>Esperando que escribas una respuesta para previsualizar si está en el tablero...</span>
+                </div>
+            </div>
+
+            <!-- Direct Strike (X) & Soundboard Controls (5 cols) -->
+            <div class="lg:col-span-5 bg-gradient-to-b from-red-950/60 via-slate-900 to-slate-950 border-2 border-red-500/70 rounded-3xl p-5 flex flex-col justify-between gap-3 shadow-xl">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-show font-bold text-lg text-red-300 flex items-center gap-2">
+                        <span>🚨 Botonera de Strikes (❌ en TV)</span>
+                    </h3>
+                    <span id="hostStrikesCountBadge" class="px-2.5 py-0.5 rounded-full bg-red-500/30 border border-red-400 text-red-200 text-xs font-extrabold">
+                        Strikes actuales: 0 / 3
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <button onclick="triggerManualStrike(1)" class="py-3 px-2 rounded-2xl bg-red-900/80 hover:bg-red-700 border-2 border-red-400 text-white font-show font-extrabold text-sm shadow transition flex flex-col items-center justify-center gap-1">
+                        <span class="text-xl">❌</span>
+                        <span>1 Strike</span>
+                    </button>
+                    <button onclick="triggerManualStrike(2)" class="py-3 px-2 rounded-2xl bg-red-900/80 hover:bg-red-700 border-2 border-red-400 text-white font-show font-extrabold text-sm shadow transition flex flex-col items-center justify-center gap-1">
+                        <span class="text-xl">❌❌</span>
+                        <span>2 Strikes</span>
+                    </button>
+                    <button onclick="triggerManualStrike(3)" class="py-3 px-2 rounded-2xl bg-red-900/80 hover:bg-red-700 border-2 border-red-400 text-white font-show font-extrabold text-sm shadow transition flex flex-col items-center justify-center gap-1">
+                        <span class="text-xl">❌❌❌</span>
+                        <span>3 (¡Robo!)</span>
+                    </button>
+                    <button onclick="triggerQuickErrorBuzzer()" class="py-3 px-2 rounded-2xl bg-rose-950 hover:bg-rose-800 border-2 border-rose-400/70 text-rose-200 font-show font-bold text-xs shadow transition flex flex-col items-center justify-center gap-1" title="Muestra una X rápida y chicharra sin alterar la cuenta de strikes">
+                        <span class="text-xl">🔊❌</span>
+                        <span>Error Rápido</span>
+                    </button>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800">
+                    <button onclick="resetStrikes()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-rotate-left"></i> Limpiar Strikes (0)
+                    </button>
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="broadcastSoundEffect('DING')" class="px-2.5 py-1.5 rounded-xl bg-emerald-950 hover:bg-emerald-800 border border-emerald-500/50 text-emerald-200 text-xs font-bold transition">
+                            🔔 Ding
+                        </button>
+                        <button onclick="broadcastSoundEffect('TENSION')" class="px-2.5 py-1.5 rounded-xl bg-sky-950 hover:bg-sky-800 border border-sky-500/50 text-sky-200 text-xs font-bold transition">
+                            🥁 Tensión
+                        </button>
+                        <button onclick="broadcastSoundEffect('FANFARE')" class="px-2.5 py-1.5 rounded-xl bg-amber-950 hover:bg-amber-800 border border-amber-500/50 text-amber-200 text-xs font-bold transition">
+                            🎉 Triunfo
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTTOM ROW: SECRET INTERACTIVE CHEAT SHEET (LAS 5 RESPUESTAS DE LA RONDA) -->
+        <div class="bg-slate-900/95 border-2 border-indigo-400/80 rounded-3xl p-5 shadow-2xl">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div class="flex items-center gap-2.5">
+                    <span class="px-3 py-1 rounded-full bg-indigo-500/30 border border-indigo-400 text-indigo-200 text-xs font-extrabold uppercase">
+                        🔒 Chuleta Secreta de 1 Clic
+                    </span>
+                    <h3 class="font-show font-bold text-lg sm:text-xl text-white">
+                        Respuestas de la Ronda Actual (Solo tú las ves)
+                    </h3>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="revealAllLeftoversNoPoints()" class="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs sm:text-sm shadow transition flex items-center gap-1.5" title="Destapa en la TV las respuestas que nadie adivinó al terminar la ronda, sin alterar el banco de puntos">
+                        <i class="fa-solid fa-eye"></i>
+                        <span>Revelar Sobrantes en TV (Sin sumar puntos)</span>
+                    </button>
+                    <button onclick="resetCurrentRound()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold text-xs sm:text-sm transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-rotate-right text-amber-400"></i>
+                        <span>Reiniciar Ronda</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 5 Interactive Cheat Sheet Cards -->
+            <div id="hostCheatSheetGrid" class="grid grid-cols-1 gap-3">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ==================== MODAL: CLOUD / SALA CONFIG FOR NETLIFY & MOBILE ==================== -->
+    <div id="cloudConfigModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-sky-400 rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <i class="fa-solid fa-cloud text-sky-400 text-2xl"></i>
+                    <h2 class="font-show text-xl sm:text-2xl font-bold text-white">
+                        Sincronización de Pantallas (Local y Netlify)
+                    </h2>
+                </div>
+                <button onclick="closeCloudModal()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Quick Links Section -->
+            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3">
+                <div class="text-xs font-extrabold uppercase text-emerald-400 tracking-wider">
+                    ✅ Opción 1: Misma Computadora (Laptop + Proyector/TV por HDMI)
+                </div>
+                <p class="text-xs sm:text-sm text-slate-300">
+                    ¡No necesitas configurar nada! Al abrir el Tablero y el Panel del Presentador en dos ventanas del mismo navegador, se sincronizan en <strong>0 milisegundos</strong> automáticamente.
+                </p>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="openCompanionWindow()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2">
+                        <i class="fa-solid fa-up-right-from-square"></i>
+                        <span>Abrir Ventana Secundaria Ahora</span>
+                    </button>
+                    <button onclick="copyPresenterLink()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 font-bold text-xs flex items-center gap-2 border border-slate-700">
+                        <i class="fa-solid fa-copy"></i>
+                        <span>Copiar Link del Panel Presentador</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Firebase Custom Config for Netlify Cross-Device (Laptop TV + Phone Remote) -->
+            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3">
+                <div class="text-xs font-extrabold uppercase text-amber-400 tracking-wider">
+                    ☁️ Opción 2: Controlar desde tu Celular en Netlify (Firebase Cloud)
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    Si subes este archivo a <strong>Netlify</strong> y quieres tener la TV en tu laptop y usar tu <strong>Celular como control remoto</strong>, escribe el mismo Código de Sala en ambos dispositivos y pega tu `firebaseConfig` de Firebase Firestore:
+            <!-- Firebase / PeerJS Cloud Config for Netlify Cross-Device (Laptop TV + Phone Remote) -->
+            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3">
+                <div class="text-xs font-extrabold uppercase text-amber-400 tracking-wider">
+                    📱 Opción 2: Usar tu Celular como Control Remoto en Netlify (Automático)
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    ¡Ya incluye sincronización automática en la nube! Solo abre tu link de Netlify en la Laptop (Modo Tablero TV) y en tu Celular (Modo Presentador) con el <strong>mismo Código de Sala</strong>:
+                </p>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Código de Sala (Debe ser igual en tu Laptop y en tu Celular)</label>
+                    <input id="roomCodeInput" type="text" value="BABY-2026" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-yellow-300 font-mono font-bold text-sm focus:border-yellow-400 focus:outline-none" />
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button onclick="closeCloudModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs">
+                        Cerrar
+                    </button>
+                    <button onclick="saveCloudAndRoomSettings()" class="px-5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-show font-extrabold text-sm shadow">
+                        Guardar y Conectar Sala
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: EDIT / CUSTOMIZE QUESTIONS ==================== -->
+    <div id="editorModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-3 sm:p-6">
+        <div class="bg-slate-900 border-2 border-yellow-400 rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <i class="fa-solid fa-pen-to-square text-yellow-400 text-xl"></i>
+                    <h2 class="font-show text-xl sm:text-2xl font-bold text-white">
+                        Editor de Rondas y Preguntas (10 Rondas Baby Shower)
+                    </h2>
+                </div>
+                <button id="closeEditorBtn" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-5 overflow-y-auto space-y-5 flex-1">
+                <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <label for="editorRoundSelect" class="text-sm font-bold text-slate-300">Ronda a editar:</label>
+                        <select id="editorRoundSelect" class="bg-slate-800 border border-slate-600 text-yellow-300 font-bold rounded-xl px-3 py-1.5 text-sm">
+                            <!-- Populated via JS -->
+                        </select>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" id="addNewRoundBtn" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus"></i> Nueva Ronda
+                        </button>
+                        <button type="button" id="exportJsonBtn" class="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-download"></i> Descargar Respaldo
+                        </button>
+                        <button type="button" id="restoreDefaultsBtn" class="px-3 py-1.5 rounded-xl bg-rose-900/80 hover:bg-rose-800 text-rose-200 text-xs font-bold transition">
+                            Restaurar las 10 Originales
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Question & Multiplier inputs -->
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div class="sm:col-span-3">
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Pregunta de la Ronda</label>
+                        <input id="editQuestionText" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-semibold focus:border-yellow-400 focus:outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Multiplicador</label>
+                        <select id="editRoundMultiplier" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-yellow-300 font-bold focus:border-yellow-400 focus:outline-none">
+                            <option value="1">Simple (x1)</option>
+                            <option value="2">Doble (x2)</option>
+                            <option value="3">Triple (x3)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Answers Table -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-bold uppercase text-slate-400">
+                            Respuestas Populares (De la #1 más popular a la #5)
+                        </label>
+                        <button type="button" id="addAnswerRowBtn" class="text-xs font-bold text-yellow-400 hover:text-yellow-300 flex items-center gap-1">
+                            <i class="fa-solid fa-plus-circle"></i> Agregar Opción
+                        </button>
+                    </div>
+                    <div id="editorAnswersContainer" class="space-y-2.5">
+                        <!-- Answer rows rendered via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between gap-3">
+                <button type="button" id="resetTotalGameBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-rose-950 hover:text-rose-200 text-slate-300 text-xs sm:text-sm font-bold transition">
+                    Reiniciar Todo el Juego a Cero
+                </button>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="cancelEditorBtn" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm transition">
+                        Cancelar
+                    </button>
+                    <button type="button" id="saveEditorBtn" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-slate-950 font-show font-extrabold text-sm sm:text-base shadow-lg transition">
+                        Guardar y Sincronizar Tablero
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== APPLICATION LOGIC & DUAL SYNC ENGINE ==================== -->
+    <script>
+        // ============================================================================
+        // 1. 10 COMPLETE BABY SHOWER ROUNDS (MEXICAN EDITION WITH RICH SYNONYMS)
+        // ============================================================================
+        const DEFAULT_ROUNDS = [
+            {
+                id: 1,
+                question: "¿Qué es lo primero que compran los papás cuando saben que viene el bebé?",
+                multiplier: 1,
+                answers: [
+                    { text: "Pañales", points: 38, synonyms: ["panal", "panales", "huggies", "kleenbebe", "pampers", "etapa 1", "recien nacido", "paquete de panales"] },
+                    { text: "Ropita / Mamelucos", points: 25, synonyms: ["ropa", "ropita", "mameluco", "mamelucos", "panalero", "panaleros", "calcetines", "zapatitos", "gorrito", "chambrita", "body"] },
+                    { text: "Biberones / Mamilas", points: 16, synonyms: ["biberon", "biberones", "mamila", "mamilas", "tetero", "chupon", "chupones", "mamadera"] },
+                    { text: "Cuna / Moisés", points: 12, synonyms: ["cuna", "moises", "cama", "camita", "corral", "colecho", "portabebe"] },
+                    { text: "Carriola", points: 9, synonyms: ["carriola", "cochecito", "carrito", "paseador", "autoasiento", "silla para carro"] }
+                ]
+            },
+            {
+                id: 2,
+                question: "¿Qué es lo que más extrañan hacer los papás durante los primeros meses del bebé?",
+                multiplier: 1,
+                answers: [
+                    { text: "Dormir de corrido", points: 45, synonyms: ["sueno", "dormir", "descanso", "descansar", "horas de sueno", "desvelo", "dormir bien", "siesta", "dormir toda la noche"] },
+                    { text: "Salir de fiesta / Citas", points: 22, synonyms: ["tiempo", "tiempo libre", "salidas", "fiestas", "vida social", "libertad", "salir", "citas", "cine", "bailar", "intimidad"] },
+                    { text: "Comer caliente y con calma", points: 14, synonyms: ["comer", "comer caliente", "comer tranquilo", "desayunar", "cenar", "comida"] },
+                    { text: "Tener dinero / Ahorrar", points: 11, synonyms: ["dinero", "quincena", "ahorros", "sueldo", "plata", "lana", "cartera", "presupuesto"] },
+                    { text: "Silencio / Ver series en paz", points: 8, synonyms: ["silencio", "paz", "calma", "tranquilidad", "ver tele", "series", "peliculas", "descansar en el sillon"] }
+                ]
+            },
+            {
+                id: 3,
+                question: "Además de llorar, ¿qué otra cosa hace un bebé todo el día?",
+                multiplier: 1,
+                answers: [
+                    { text: "Dormir", points: 36, synonyms: ["dormir", "duerme", "sueno", "siesta", "descansar", "roncar"] },
+                    { text: "Comer / Tomar leche", points: 29, synonyms: ["comer", "leche", "tomar leche", "mamar", "pecho", "mamila", "biberon", "alimentarse", "lactar", "chichi"] },
+                    { text: "Hacer del baño (Popó / Pipí)", points: 21, synonyms: ["bano", "popo", "pipi", "caca", "popis", "ensuciar el panal", "hacer popo", "hacer pipi", "orinar"] },
+                    { text: "Reírse / Balbucear", points: 9, synonyms: ["reir", "reirse", "sonreir", "balbucear", "hacer ruidos", "gritar", "platicar", "risas", "gestos"] },
+                    { text: "Chuparse el dedo / Babear", points: 5, synonyms: ["chupar", "chuparse el dedo", "dedo", "manos", "babea", "babear", "chuparse las manos", "pie"] }
+                ]
+            },
+            {
+                id: 4,
+                question: "¿Qué llevan en la pañalera que jamás puede faltar?",
+                multiplier: 1,
+                answers: [
+                    { text: "Pañales", points: 35, synonyms: ["panal", "panales", "huggies", "pampers"] },
+                    { text: "Toallitas húmedas", points: 26, synonyms: ["toallitas", "toallas humedas", "toallitas humedas", "wipes", "papel", "kleenex"] },
+                    { text: "Cambio de ropa extra", points: 17, synonyms: ["ropa", "cambio de ropa", "muda", "mameluco", "ropita", "panalero", "cobijita", "babero"] },
+                    { text: "Biberón / Leche en polvo", points: 13, synonyms: ["biberon", "mamila", "leche", "formula", "agua", "tetero", "chupon"] },
+                    { text: "Pomada para rozaduras", points: 9, synonyms: ["pomada", "crema", "pasta lassar", "bepanthen", "hipoglos", "rozaduras", "talco"] }
+                ]
+            },
+            {
+                id: 5,
+                question: "¿Qué pretexto clásico pone el papá para no cambiar el pañal sucio?",
+                multiplier: 1,
+                answers: [
+                    { text: "Me da asco / Me vomito", points: 34, synonyms: ["asco", "vomito", "huele feo", "guacala", "me mareo", "huele muy fuerte", "nauseas"] },
+                    { text: "No sé ponerlo bien", points: 25, synonyms: ["no se", "no me sale", "lo pongo chueco", "se le sale", "tu lo pones mejor", "no se cambiarlo"] },
+                    { text: "Te toca a ti / Yo cambié el otro", points: 19, synonyms: ["te toca", "yo cambie el anterior", "es tu turno", "yo lo cambie", "te toca a ti"] },
+                    { text: "Estoy ocupado / En el baño", points: 13, synonyms: ["ocupado", "trabajando", "estoy en el bano", "estoy comiendo", "manos ocupadas", "jugando", "manejando"] },
+                    { text: "Estoy dormido / No escuché", points: 9, synonyms: ["dormido", "estoy dormido", "no escuche", "se hace el dormido", "roncando", "quiere a su mama"] }
+                ]
+            },
+            {
+                id: 6,
+                question: "¿A quién llaman primero los papás primerizos cuando el bebé llora y no saben qué tiene?",
+                multiplier: 1,
+                answers: [
+                    { text: "A la abuela / Mamá", points: 44, synonyms: ["mama", "abuela", "abuelita", "mi mama", "a su mama", "nana"] },
+                    { text: "Al pediatra / Doctor", points: 28, synonyms: ["pediatra", "doctor", "medico", "hospital", "urgencias", "clinica"] },
+                    { text: "Buscan en Google / TikTok", points: 14, synonyms: ["google", "internet", "tiktok", "youtube", "redes", "chatgpt", "buscador"] },
+                    { text: "A la suegra", points: 8, synonyms: ["suegra", "suegro", "suegros", "mama de mi esposo"] },
+                    { text: "A una hermana / Tía con hijos", points: 6, synonyms: ["tia", "hermana", "cunada", "amiga", "comadre", "prima"] }
+                ]
+            },
+            {
+                id: 7,
+                question: "¿A quién o en qué parte del cuerpo dicen siempre las tías que se parece el bebé?",
+                multiplier: 2,
+                answers: [
+                    { text: "Idéntico al papá", points: 36, synonyms: ["papa", "al papa", "igualito al papa", "su papa", "padre", "clon del papa"] },
+                    { text: "Los ojos de la mamá", points: 25, synonyms: ["mama", "a la mama", "ojos", "mirada", "sonrisa de la mama", "igual a la mama"] },
+                    { text: "Al abuelo / La abuelita", points: 17, synonyms: ["abuelo", "abuela", "abuelito", "abuelita", "abuelos"] },
+                    { text: "En las orejas / La nariz", points: 13, synonyms: ["nariz", "orejas", "boca", "frente", "cachetes", "barba", "pelo", "cabello"] },
+                    { text: "En lo enojón / El carácter", points: 9, synonyms: ["caracter", "enojon", "berrinchudo", "frente fruncida", "serio", "tragón", "dormilon"] }
+                ]
+            },
+            {
+                id: 8,
+                question: "Menciona un antojo típico de una embarazada a medianoche",
+                multiplier: 2,
+                answers: [
+                    { text: "Tacos / Garnachas", points: 33, synonyms: ["tacos", "quesadillas", "elote", "esquites", "tamales", "hamburguesa", "pizza", "antojitos", "torta"] },
+                    { text: "Helado / Nieve", points: 26, synonyms: ["helado", "nieve", "paleta", "frio", "malteada", "frappe"] },
+                    { text: "Fruta con chile y limón", points: 19, synonyms: ["fruta", "mango", "jicama", "pepino", "chamoy", "chile", "limon", "fresas", "sandia", "picante"] },
+                    { text: "Pastel / Pan dulce", points: 13, synonyms: ["pastel", "pan", "pan dulce", "dona", "concha", "postre", "galletas", "crepa", "pay"] },
+                    { text: "Chocolate / Dulces", points: 9, synonyms: ["chocolate", "chocolates", "dulce", "dulces", "gomitas", "nutella", "cajeta"] }
+                ]
+            },
+            {
+                id: 9,
+                question: "Palabra o sonido que hacen los adultos cuando ven a un bebé recién nacido",
+                multiplier: 2,
+                answers: [
+                    { text: "¡Awww! / ¡Cosita!", points: 37, synonyms: ["awww", "aw", "cosita", "ay", "ternurita", "vida", "mi amor", "bebe"] },
+                    { text: "¡Qué hermoso / Precioso!", points: 24, synonyms: ["hermoso", "precioso", "bonito", "lindo", "divino", "bello", "chulo", "guapo"] },
+                    { text: "¡Qué chiquito está!", points: 18, synonyms: ["chiquito", "pequenito", "miniatura", "compacto", "delgadito", "fragil"] },
+                    { text: "¡Gugú tatá! / Hablar chiqueado", points: 12, synonyms: ["gugu", "tata", "chiqueado", "hacer trompillas", "ruidos", "besitos", "cuchicuchi"] },
+                    { text: "¡Mira esos cachetotes!", points: 9, synonyms: ["cachetes", "cacheton", "cachetotes", "gordito", "piernotas", "roscas"] }
+                ]
+            },
+            {
+                id: 10,
+                question: "¿Qué regalo nunca falta en la mesa de regalos de un Baby Shower?",
+                multiplier: 3,
+                answers: [
+                    { text: "Pañales / Pastel de pañales", points: 42, synonyms: ["panales", "panal", "pastel de panales", "caja de panales"] },
+                    { text: "Ropita / Mamelucos", points: 27, synonyms: ["ropa", "ropita", "mamelucos", "mameluco", "panaleros", "vestidito", "traje"] },
+                    { text: "Toallitas húmedas", points: 15, synonyms: ["toallitas", "toallas humedas", "wipes"] },
+                    { text: "Biberones / Chupones", points: 10, synonyms: ["biberon", "biberones", "mamilas", "mamila", "chupon", "chupones"] },
+                    { text: "Cobijitas / Toalla de baño", points: 6, synonyms: ["cobija", "cobijita", "cobijitas", "frazada", "sabana", "toalla", "bano", "shampoo"] }
+                ]
+            }
+        ];
+
+        // ============================================================================
+        // 2. SHARED GAME STATE & SCREEN MODE (`tablero` vs `presentador`)
+        // ============================================================================
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialViewParam = urlParams.get("vista"); // 'tablero' or 'presentador'
+        let roomCode = (urlParams.get("sala") || localStorage.getItem("papis_room_code") || "BABY-2026").toUpperCase().replace(/[^A-Z0-9-]/g, "");
+
+        let currentScreenMode = initialViewParam === "presentador" ? "presentador" : "tablero";
+
+        // IMPORTANT: activeTeam starts at 0 (NEUTRAL - Waiting for physical button duel!)
+        let gameState = {
+            currentRoundIndex: 0,
+            multiplier: 1,
+            roundPot: 0,
+            strikes: 0,
+            activeTeam: 0, // 0 = Neutral (Duelo de Botones), 1 = Equipo Mamá, 2 = Equipo Papá
+            player1Name: "",
+            player2Name: "",
+            questionVisible: true,
+            team1Name: "Equipo Mamá 💖",
+            team1Score: 0,
+            team2Name: "Equipo Papá 💙",
+            team2Score: 0,
+            rounds: JSON.parse(JSON.stringify(DEFAULT_ROUNDS)).map(r => ({
+                ...r,
+                answers: r.answers.map(a => ({ ...a, revealed: false, countPoints: true }))
+            })),
+            lastEvent: null
+        };
+
+        let lastProcessedEventId = 0;
+        let soundMuted = false;
+        let audioCtx = null;
+
+        // Multi-Device & Multi-Window Sync Channels
+        let broadcastChannel = null;
+        let peerInstance = null;
+        let peerConnections = [];
+        let reconnectTimer = null;
+        let isApplyingRemoteUpdate = false;
+
+        // ============================================================================
+        // 3. SYNTHESIZED GAME SHOW SOUND EFFECTS (Web Audio API)
+        // ============================================================================
+        function getAudioContext() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    audioCtx = new AudioContextClass();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playDingSound(isTopAnswer = false) {
+            if (soundMuted) return;
+            const ctx = getAudioContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            const freqs = isTopAnswer ? [1046.5, 1318.5, 1567.98, 2093.0] : [987.77, 1318.51];
+            freqs.forEach((f, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(f, now + idx * 0.06);
+
+                gain.gain.setValueAtTime(0.001, now + idx * 0.06);
+                gain.gain.exponentialRampToValueAtTime(0.35, now + idx * 0.06 + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.06 + 0.85);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now + idx * 0.06);
+                osc.stop(now + idx * 0.06 + 0.9);
+            });
+        }
+
+        function playBuzzerSound() {
+            if (soundMuted) return;
+            const ctx = getAudioContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            const osc1 = ctx.createOscillator();
+            const osc2 = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc1.type = 'sawtooth';
+            osc2.type = 'square';
+            osc1.frequency.setValueAtTime(110, now);
+            osc2.frequency.setValueAtTime(116.5, now);
+
+            gain.gain.setValueAtTime(0.38, now);
+            gain.gain.setValueAtTime(0.38, now + 0.55);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.78);
+
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc1.start(now);
+            osc2.start(now);
+            osc1.stop(now + 0.8);
+            osc2.stop(now + 0.8);
+        }
+
+        function playVictoryFanfare() {
+            if (soundMuted) return;
+            const ctx = getAudioContext();
+            if (!ctx) return;
+
+            const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50];
+            const times = [0, 0.12, 0.24, 0.36, 0.52, 0.66];
+            const durations = [0.1, 0.1, 0.1, 0.14, 0.12, 0.45];
+
+            const now = ctx.currentTime;
+            notes.forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now + times[i]);
+
+                gain.gain.setValueAtTime(0.3, now + times[i]);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + times[i] + durations[i]);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now + times[i]);
+                osc.stop(now + times[i] + durations[i] + 0.05);
+            });
+        }
+
+        function playTensionSound() {
+            if (soundMuted) return;
+            const ctx = getAudioContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            for (let i = 0; i < 8; i++) {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(90 - (i * 3), now + i * 0.12);
+                gain.gain.setValueAtTime(0.25, now + i * 0.12);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.09);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now + i * 0.12);
+                osc.stop(now + i * 0.12 + 0.1);
+            }
+        }
+
+        // Physical Button Lock-In Sound Effect
+        function playBuzzerLockSound() {
+            if (soundMuted) return;
+            const ctx = getAudioContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            const freqs = [587.33, 880, 1174.66];
+            freqs.forEach((f, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(f, now + idx * 0.045);
+
+                gain.gain.setValueAtTime(0.28, now + idx * 0.045);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.045 + 0.35);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now + idx * 0.045);
+                osc.stop(now + idx * 0.045 + 0.38);
+            });
+        }
+
+        // ============================================================================
+        // 4. SMART SPANISH FUZZY & SYNONYM MATCHER
+        // ============================================================================
+        const STOPWORDS = new Set([
+            "el", "la", "los", "las", "un", "una", "unos", "unas",
+            "de", "del", "al", "a", "en", "con", "por", "para", "su", "sus", "mi", "mis", "que", "se", "lo"
+        ]);
+
+        function normalizeSpanishText(str) {
+            if (!str) return "";
+            return str
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9\s]/g, " ")
+                .split(/\s+/)
+                .filter(word => word && !STOPWORDS.has(word))
+                .join(" ")
+                .trim();
+        }
+
+        function stemSpanishWord(word) {
+            if (word.length <= 3) return word;
+            if (word.endsWith("ces")) return word.slice(0, -3) + "z";
+            if (word.endsWith("es") && word.length > 4) return word.slice(0, -2);
+            if (word.endsWith("s") && !word.endsWith("ss")) return word.slice(0, -1);
+            return word;
+        }
+
+        function levenshtein(a, b) {
+            const matrix = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+            for (let j = 1; j <= b.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= a.length; i++) {
+                for (let j = 1; j <= b.length; j++) {
+                    const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j] + 1,
+                        matrix[i][j - 1] + 1,
+                        matrix[i - 1][j - 1] + cost
+                    );
+                }
+            }
+            return matrix[a.length][b.length];
+        }
+
+        function findMatchingAnswerIndex(rawGuess, roundAnswers) {
+            const cleanGuess = normalizeSpanishText(rawGuess);
+            if (!cleanGuess) return -1;
+
+            const guessWords = cleanGuess.split(" ").map(stemSpanishWord);
+            const guessStemsJoined = guessWords.join(" ");
+
+            for (let idx = 0; idx < roundAnswers.length; idx++) {
+                const ans = roundAnswers[idx];
+                const candidates = [ans.text, ...(ans.synonyms || [])];
+
+                for (const candidate of candidates) {
+                    const cleanCand = normalizeSpanishText(candidate);
+                    if (!cleanCand) continue;
+
+                    const candWords = cleanCand.split(" ").map(stemSpanishWord);
+                    const candStemsJoined = candWords.join(" ");
+
+                    if (cleanGuess === cleanCand || guessStemsJoined === candStemsJoined) {
+                        return idx;
+                    }
+                    if (cleanGuess.length >= 4 && (cleanCand.includes(cleanGuess) || cleanGuess.includes(cleanCand))) {
+                        return idx;
+                    }
+                    if (guessStemsJoined.length >= 4 && (candStemsJoined.includes(guessStemsJoined) || guessStemsJoined.includes(candStemsJoined))) {
+                        return idx;
+                    }
+
+                    for (const gw of guessWords) {
+                        if (gw.length < 3) continue;
+                        for (const cw of candWords) {
+                            if (cw.length < 3) continue;
+                            if (gw === cw) return idx;
+                            if (gw.length >= 5 && cw.length >= 5 && levenshtein(gw, cw) <= 1) {
+                                return idx;
+                            }
+                        }
+                    }
+                }
+            }
+            return -1;
+        }
+
+        // ============================================================================
+        // 5. AUTOMATIC MULTI-DEVICE SYNC (PeerJS WebRTC + BroadcastChannel + Storage)
+        // ============================================================================
+        function updateSyncBadge(statusText, isOnline = true) {
+            const badge = document.getElementById("syncStatusBadge");
+            const roomBadge = document.getElementById("roomCodeBadge");
+            if (roomBadge) roomBadge.textContent = `Sala: ${roomCode}`;
+            if (!badge) return;
+
+            if (isOnline) {
+                badge.className = "inline-flex items-center gap-1.5 text-emerald-400 font-semibold";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> ${statusText}`;
+            } else {
+                badge.className = "inline-flex items-center gap-1.5 text-amber-300 font-semibold";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> ${statusText}`;
+            }
+        }
+
+        function initLocalAndCloudSync() {
+            // 1. Local BroadcastChannel + localStorage for same-device windows
+            if ('BroadcastChannel' in window) {
+                if (broadcastChannel) broadcastChannel.close();
+                broadcastChannel = new BroadcastChannel('100_papis_sync_' + roomCode);
+                broadcastChannel.onmessage = (event) => {
+                    const msg = event.data;
+                    if (!msg) return;
+                    if (msg.type === 'REQUEST_CURRENT_STATE') {
+                        broadcastChannel.postMessage({ type: 'STATE_SYNC', state: gameState });
+                    } else if (msg.type === 'STATE_SYNC' && msg.state) {
+                        applyIncomingState(msg.state);
+                    }
+                };
+                broadcastChannel.postMessage({ type: 'REQUEST_CURRENT_STATE' });
+            }
+
+            window.addEventListener("storage", (e) => {
+                if (e.key === "papis_state_" + roomCode && e.newValue) {
+                    try {
+                        applyIncomingState(JSON.parse(e.newValue));
+                    } catch (err) {}
+                }
+            });
+
+            // 2. PeerJS Cloud Bridge for Celular <-> Laptop on Netlify (Zero Config!)
+            initPeerJsBridge();
+        }
+
+        function getTvPeerId() {
+            return `papis2026-tv-${roomCode.toLowerCase()}`;
+        }
+
+        function initPeerJsBridge() {
+            if (typeof Peer === "undefined") {
+                updateSyncBadge("🟢 Sincronizado Local", true);
+                return;
+            }
+
+            if (peerInstance) {
+                try { peerInstance.destroy(); } catch (e) {}
+                peerInstance = null;
+            }
+            peerConnections = [];
+
+            const targetTvId = getTvPeerId();
+
+            if (currentScreenMode === 'tablero') {
+                // TV Board acts as the host peer with a deterministic ID based on roomCode
+                peerInstance = new Peer(targetTvId);
+
+                peerInstance.on('open', () => {
+                    updateSyncBadge("🟢 TV Lista (Esperando Celular/Control)", true);
+                });
+
+                peerInstance.on('connection', (conn) => {
+                    setupPeerConnection(conn);
+                });
+
+                peerInstance.on('error', (err) => {
+                    if (err.type === 'unavailable-id') {
+                        // Another TV tab already owns the main ID; connect as a secondary client
+                        connectAsPeerClient(targetTvId);
+                    } else {
+                        updateSyncBadge("🟢 Sincronizado en Ventanas", true);
+                    }
+                });
+            } else {
+                // Presenter Panel connects to the TV Board peer ID
+                connectAsPeerClient(targetTvId);
+            }
+        }
+
+        function connectAsPeerClient(targetTvId) {
+            peerInstance = new Peer();
+
+            peerInstance.on('open', () => {
+                const conn = peerInstance.connect(targetTvId, { reliable: true });
+                setupPeerConnection(conn);
+            });
+
+            peerInstance.on('connection', (conn) => {
+                setupPeerConnection(conn);
+            });
+
+            peerInstance.on('error', () => {
+                updateSyncBadge("🟢 Modo Local / Buscando TV...", false);
+            });
+        }
+
+        function setupPeerConnection(conn) {
+            peerConnections.push(conn);
+
+            conn.on('open', () => {
+                updateSyncBadge("🟢 Celular y TV Sincronizados en Vivo", true);
+                // Exchange state on connect
+                conn.send({ type: 'STATE_SYNC', state: gameState });
+            });
+
+            conn.on('data', (msg) => {
+                if (msg && msg.type === 'STATE_SYNC' && msg.state) {
+                    applyIncomingState(msg.state);
+                    // Relay to any other connected screens
+                    peerConnections.forEach(other => {
+                        if (other !== conn && other.open) {
+                            other.send({ type: 'STATE_SYNC', state: gameState });
+                        }
+                    });
+                }
+            });
+
+            conn.on('close', () => {
+                peerConnections = peerConnections.filter(c => c !== conn);
+                if (peerConnections.length === 0) {
+                    updateSyncBadge("🟡 Reconectando con la otra pantalla...", false);
+                    if (currentScreenMode === 'presentador') {
+                        clearTimeout(reconnectTimer);
+                        reconnectTimer = setTimeout(() => {
+                            if (peerInstance && !peerInstance.destroyed) {
+                                const retryConn = peerInstance.connect(getTvPeerId(), { reliable: true });
+                                setupPeerConnection(retryConn);
+                            }
+                        }, 2500);
+                    }
+                }
+            });
+        }
+
+        function publishStateChange(eventPayload = null, skipBroadcast = false) {
+            if (eventPayload) {
+                gameState.lastEvent = {
+                    ...eventPayload,
+                    id: Date.now() + Math.random()
+                };
+                lastProcessedEventId = gameState.lastEvent.id;
+                executeVisualAndSoundEvent(gameState.lastEvent);
+            }
+
+            renderAll();
+
+            // 1. Instant BroadcastChannel + localStorage sync
+            if (!skipBroadcast && broadcastChannel) {
+                broadcastChannel.postMessage({
+                    type: 'STATE_SYNC',
+                    state: gameState
+                });
+            }
+            try {
+                localStorage.setItem("papis_state_" + roomCode, JSON.stringify(gameState));
+            } catch (e) {}
+
+            // 2. Instant PeerJS Cloud sync (Phone <-> Laptop on Netlify)
+            if (!isApplyingRemoteUpdate && peerConnections.length > 0) {
+                peerConnections.forEach(conn => {
+                    if (conn && conn.open) {
+                        try {
+                            conn.send({ type: 'STATE_SYNC', state: gameState });
+                        } catch (e) {}
+                    }
+                });
+            }
+        }
+
+        function applyIncomingState(incomingState) {
+            isApplyingRemoteUpdate = true;
+            try {
+                const incomingEvent = incomingState.lastEvent;
+                gameState = { ...gameState, ...incomingState };
+                renderAll();
+
+                if (incomingEvent && incomingEvent.id && incomingEvent.id !== lastProcessedEventId) {
+                    lastProcessedEventId = incomingEvent.id;
+                    executeVisualAndSoundEvent(incomingEvent);
+                }
+            } finally {
+                isApplyingRemoteUpdate = false;
+            }
+        }
+
+        // Executes Audio + Giant Overlays when triggered locally or remotely
+        function executeVisualAndSoundEvent(evt) {
+            if (!evt || !evt.type) return;
+
+            if (evt.type === 'REVEAL_ANSWER') {
+                playDingSound(evt.isTop);
+                if (evt.isTop) {
+                    showTopAnswerCelebration();
+                }
+                if (evt.boardComplete) {
+                    setTimeout(() => launchConfetti(), 450);
+                }
+            } else if (evt.type === 'STRIKE_X') {
+                showGiantStrikeOverlay(evt.count || 1, evt.subtitle || "¡RESPUESTA NO ENCONTRADA EN EL TABLERO!");
+            } else if (evt.type === 'BUZZER_PRESSED') {
+                playBuzzerLockSound();
+                showBuzzerWinnerOverlay(evt.team, evt.teamName, evt.playerName);
+            } else if (evt.type === 'AWARD_POT') {
+                playVictoryFanfare();
+                launchConfetti();
+                showToast(evt.message || "¡Puntos adjudicados!", "success");
+            } else if (evt.type === 'DING') {
+                playDingSound(false);
+            } else if (evt.type === 'TENSION') {
+                playTensionSound();
+            } else if (evt.type === 'FANFARE') {
+                playVictoryFanfare();
+                launchConfetti();
+            }
+        }
+
+        // ============================================================================
+        // 6. SCREEN SWITCHING & COMPANION WINDOW POPUP
+        // ============================================================================
+        window.switchScreenMode = function(mode) {
+            const previousMode = currentScreenMode;
+            currentScreenMode = mode === 'presentador' ? 'presentador' : 'tablero';
+            getAudioContext();
+
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('vista', currentScreenMode);
+            window.history.replaceState({}, '', newUrl);
+
+            const modal = document.getElementById("modeSelectorModal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+
+            renderAll();
+            if (previousMode !== currentScreenMode) {
+                initPeerJsBridge();
+            }
+        };
+
+        // ============================================================================
+        // 7. RENDERING BOTH VIEWS (TV BOARD & HOST CONTROL PANEL)
+        // ============================================================================
+        function recalculateRoundPot() {
+            const round = gameState.rounds[gameState.currentRoundIndex];
+            if (!round) return 0;
+            const rawSum = round.answers.reduce((acc, a) => {
+                const shouldCount = a.countPoints !== false;
+                return acc + (a.revealed && shouldCount ? Number(a.points) : 0);
+            }, 0);
+            gameState.roundPot = rawSum * (gameState.multiplier || 1);
+        }
+
+        function renderAll() {
+            const round = gameState.rounds[gameState.currentRoundIndex];
+            if (!round) return;
+
+            recalculateRoundPot();
+
+            // Toggle visibility of main containers based on `currentScreenMode`
+            const viewTablero = document.getElementById("viewTableroPublico");
+            const viewPresentador = document.getElementById("viewPanelPresentador");
+            const badge = document.getElementById("currentViewBadge");
+            const tabBtnTablero = document.getElementById("tabBtnTablero");
+            const tabBtnPresentador = document.getElementById("tabBtnPresentador");
+            const companionText = document.getElementById("openPopupCompanionText");
+
+            if (currentScreenMode === 'tablero') {
+                viewTablero.classList.remove("hidden");
+                viewTablero.classList.add("flex");
+                viewPresentador.classList.add("hidden");
+                viewPresentador.classList.remove("flex");
+
+                badge.textContent = "📺 TABLERO PÚBLICO (TV)";
+                badge.className = "text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-400 text-sky-200";
+                tabBtnTablero.className = "px-2.5 py-1.5 rounded-lg bg-sky-500 text-slate-950 font-extrabold transition flex items-center gap-1.5";
+                tabBtnPresentador.className = "px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white transition flex items-center gap-1.5";
+                companionText.textContent = "🚀 Abrir Control del Presentador en Ventana Aparte";
+            } else {
+                viewTablero.classList.add("hidden");
+                viewTablero.classList.remove("flex");
+                viewPresentador.classList.remove("hidden");
+                viewPresentador.classList.add("flex");
+
+                badge.textContent = "🎤 PANEL DEL PRESENTADOR (CHULETA)";
+                badge.className = "text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400 text-amber-200";
+                tabBtnPresentador.className = "px-2.5 py-1.5 rounded-lg bg-yellow-400 text-slate-950 font-extrabold transition flex items-center gap-1.5";
+                tabBtnTablero.className = "px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white transition flex items-center gap-1.5";
+                companionText.textContent = "📺 Abrir Tablero TV en Ventana Aparte";
+            }
+
+            // ---------------- RENDER PUBLIC TV BOARD ----------------
+            document.getElementById("tvTeam1NameInput").value = gameState.team1Name;
+            document.getElementById("tvTeam2NameInput").value = gameState.team2Name;
+            document.getElementById("tvTeam1ScoreDisplay").textContent = gameState.team1Score;
+            document.getElementById("tvTeam2ScoreDisplay").textContent = gameState.team2Score;
+            document.getElementById("tvRoundPotDisplay").textContent = gameState.roundPot;
+            document.getElementById("tvRoundNumberBadge").textContent = `Ronda ${gameState.currentRoundIndex + 1} de ${gameState.rounds.length}`;
+
+            // Participant Sub-badges on TV
+            document.getElementById("tvTeam1PlayerBadge").textContent = gameState.player1Name ? `🎤 ${gameState.player1Name}` : "";
+            document.getElementById("tvTeam2PlayerBadge").textContent = gameState.player2Name ? `🎤 ${gameState.player2Name}` : "";
+
+            const tvMultBadge = document.getElementById("tvMultiplierBadge");
+            if (gameState.multiplier === 1) {
+                tvMultBadge.textContent = "PUNTOS SIMPLES (x1)";
+                tvMultBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-yellow-400 text-slate-950 shadow";
+            } else if (gameState.multiplier === 2) {
+                tvMultBadge.textContent = "🔥 PUNTOS DOBLES (x2)";
+                tvMultBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-orange-500 text-white shadow animate-pulse";
+            } else {
+                tvMultBadge.textContent = "⚡ PUNTOS TRIPLES (x3)";
+                tvMultBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-rose-500 text-white shadow animate-pulse";
+            }
+
+            // Turn pills & Glowing Cards on TV (Supports 0 = Neutral Duel, 1 = Team 1, 2 = Team 2)
+            const tvTurn1 = document.getElementById("tvTeam1TurnPill");
+            const tvTurn2 = document.getElementById("tvTeam2TurnPill");
+            const tvCard1 = document.getElementById("tvTeam1Card");
+            const tvCard2 = document.getElementById("tvTeam2Card");
+            const tvTurnBanner = document.getElementById("tvTurnBannerPill");
+
+            tvCard1.classList.remove("team-active-glow-pink");
+            tvCard2.classList.remove("team-active-glow-blue");
+
+            if (gameState.activeTeam === 1) {
+                tvTurn1.textContent = "🎯 Turno en Juego";
+                tvTurn1.className = "py-2.5 px-3 rounded-2xl bg-pink-500 border-2 border-white text-slate-950 font-show font-extrabold text-sm text-center shadow-lg";
+                tvTurn2.textContent = "En Espera";
+                tvTurn2.className = "py-2.5 px-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-slate-500 font-show font-bold text-sm text-center";
+                tvCard1.classList.add("team-active-glow-pink");
+                tvTurnBanner.textContent = `🎯 Turno: ${gameState.team1Name}`;
+                tvTurnBanner.className = "px-3 py-0.5 rounded-full text-xs font-extrabold bg-pink-500 text-slate-950 uppercase shadow";
+            } else if (gameState.activeTeam === 2) {
+                tvTurn2.textContent = "🎯 Turno en Juego";
+                tvTurn2.className = "py-2.5 px-3 rounded-2xl bg-sky-400 border-2 border-white text-slate-950 font-show font-extrabold text-sm text-center shadow-lg";
+                tvTurn1.textContent = "En Espera";
+                tvTurn1.className = "py-2.5 px-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-slate-500 font-show font-bold text-sm text-center";
+                tvCard2.classList.add("team-active-glow-blue");
+                tvTurnBanner.textContent = `🎯 Turno: ${gameState.team2Name}`;
+                tvTurnBanner.className = "px-3 py-0.5 rounded-full text-xs font-extrabold bg-sky-400 text-slate-950 uppercase shadow";
+            } else {
+                // NEUTRAL STATE (0): Waiting for physical button press!
+                tvTurn1.textContent = "⏳ Esperando Botón";
+                tvTurn1.className = "py-2.5 px-3 rounded-2xl bg-slate-900/90 border border-slate-700 text-slate-300 font-show font-bold text-sm text-center";
+                tvTurn2.textContent = "⏳ Esperando Botón";
+                tvTurn2.className = "py-2.5 px-3 rounded-2xl bg-slate-900/90 border border-slate-700 text-slate-300 font-show font-bold text-sm text-center";
+                tvTurnBanner.textContent = "⚡ Duelo de Botones (Esperando quién aprieta)";
+                tvTurnBanner.className = "px-3 py-0.5 rounded-full text-xs font-extrabold bg-amber-500/20 border border-amber-400 text-amber-200 uppercase animate-pulse";
+            }
+
+            // TV Question Text (can be hidden until host reads it)
+            const tvQEl = document.getElementById("tvQuestionTextDisplay");
+            if (gameState.questionVisible) {
+                tvQEl.textContent = round.question;
+                tvQEl.className = "font-show text-lg sm:text-2xl font-bold text-white leading-snug";
+            } else {
+                tvQEl.textContent = "🎤 Escucha con atención la pregunta del presentador...";
+                tvQEl.className = "font-show text-lg sm:text-2xl font-bold text-yellow-300/90 italic leading-snug";
+            }
+
+            // TV 5 Answer Slots
+            const tvGrid = document.getElementById("tvBoardSlotsGrid");
+            tvGrid.innerHTML = round.answers.map((ans, idx) => {
+                const isTop = idx === 0;
+                const multipliedPts = Number(ans.points) * (gameState.multiplier || 1);
+                return `
+                <div class="slot-perspective">
+                    <div class="slot-inner ${ans.revealed ? 'flipped' : ''}">
+                        <!-- Front Unrevealed Face -->
+                        <div class="slot-face slot-front flex items-center justify-between px-6">
+                            <div class="flex items-center gap-3">
+                                <span class="text-sky-300/60 text-lg">✦</span>
+                                ${isTop ? `<span class="text-xs font-extrabold uppercase tracking-wider px-3 py-0.5 rounded-full bg-yellow-400/20 border border-yellow-300/60 text-yellow-200">★ #1 Más Popular</span>` : `<span class="text-xs uppercase tracking-widest text-sky-200/50 font-bold">100 Papis Dijeron</span>`}
+                            </div>
+                            <div class="number-oval w-16 h-12 rounded-full flex items-center justify-center font-show font-extrabold text-2xl sm:text-3xl text-yellow-300">
+                                ${idx + 1}
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs uppercase tracking-widest text-sky-200/50 font-bold hidden sm:inline">Baby Shower</span>
+                                <span class="text-sky-300/60 text-lg">✦</span>
+                            </div>
+                        </div>
+
+                        <!-- Back Revealed Face -->
+                        <div class="slot-face slot-back ${isTop ? 'rank-one' : ''} flex items-center justify-between px-5 sm:px-7">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <span class="w-9 h-9 rounded-full bg-slate-950 text-yellow-300 font-show font-extrabold text-lg flex items-center justify-center shrink-0">
+                                    ${idx + 1}
+                                </span>
+                                <span class="font-show font-extrabold text-xl sm:text-2xl md:text-3xl tracking-wide truncate text-slate-950">
+                                    ${ans.text}
+                                </span>
+                                ${isTop ? `<span class="hidden md:inline-flex items-center px-3 py-0.5 rounded-full text-xs font-black bg-slate-950 text-yellow-300 pulse-badge shrink-0">👑 #1 POPULAR</span>` : ''}
+                            </div>
+                            <div class="bg-slate-950 text-yellow-300 font-led font-black text-2xl sm:text-3xl px-4 py-1.5 rounded-xl border-2 border-yellow-400 shadow shrink-0 ml-2">
+                                ${multipliedPts}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join("");
+
+            // TV Strikes Pips
+            for (let i = 1; i <= 3; i++) {
+                const pip = document.getElementById(`tvStrikePip${i}`);
+                if (i <= gameState.strikes) {
+                    pip.className = "w-11 h-11 rounded-2xl bg-red-600 border-2 border-red-300 flex items-center justify-center font-show font-black text-2xl text-white shadow-[0_0_20px_rgba(239,68,68,0.95)] transition-all scale-110";
+                } else {
+                    pip.className = "w-11 h-11 rounded-2xl bg-slate-900 border-2 border-slate-700 flex items-center justify-center font-show font-black text-2xl text-slate-700 transition-all";
+                }
+            }
+            const tvStealAlert = document.getElementById("tvStealModeAlert");
+            if (gameState.strikes >= 3) {
+                tvStealAlert.classList.remove("hidden");
+            } else {
+                tvStealAlert.classList.add("hidden");
+            }
+
+            // ---------------- RENDER HOST REMOTE & CHEAT SHEET PANEL ----------------
+            document.getElementById("hostRoundLabel").textContent = `Ronda ${gameState.currentRoundIndex + 1} de ${gameState.rounds.length}`;
+            document.getElementById("hostQuestionDisplay").textContent = round.question;
+
+            const hostEyeIcon = document.getElementById("hostQuestionEyeIcon");
+            const hostEyeText = document.getElementById("hostQuestionEyeText");
+            if (gameState.questionVisible) {
+                hostEyeIcon.className = "fa-solid fa-eye text-emerald-400";
+                hostEyeText.textContent = "Pregunta Visible en TV (Clic para ocultar)";
+            } else {
+                hostEyeIcon.className = "fa-solid fa-eye-slash text-amber-400";
+                hostEyeText.textContent = "Pregunta Oculta en TV (Clic para mostrar)";
+            }
+
+            // Host Round Select
+            const hostRoundSelect = document.getElementById("hostRoundSelect");
+            hostRoundSelect.innerHTML = gameState.rounds.map((r, idx) =>
+                `<option value="${idx}" ${idx === gameState.currentRoundIndex ? "selected" : ""}>
+                    Ronda ${idx + 1}: ${r.question.slice(0, 38)}...
+                </option>`
+            ).join("");
+
+            // Host Multiplier Buttons
+            document.querySelectorAll(".host-mult-btn").forEach(btn => {
+                const m = Number(btn.dataset.hostMult);
+                if (m === gameState.multiplier) {
+                    btn.className = "host-mult-btn px-2.5 py-1 rounded-lg bg-yellow-400 text-slate-950 font-extrabold text-xs transition";
+                } else {
+                    btn.className = "host-mult-btn px-2.5 py-1 rounded-lg text-slate-300 hover:text-white font-bold text-xs transition";
+                }
+            });
+
+            // Host Mini Scores & Turn
+            document.getElementById("hostPotBadge").textContent = `Banco: ${gameState.roundPot} pts`;
+            document.getElementById("hostTeam1NameInput").value = gameState.team1Name;
+            document.getElementById("hostTeam2NameInput").value = gameState.team2Name;
+            document.getElementById("hostTeam1Score").textContent = gameState.team1Score;
+            document.getElementById("hostTeam2Score").textContent = gameState.team2Score;
+            document.getElementById("hostStrikesCountBadge").textContent = `Strikes actuales: ${gameState.strikes} / 3`;
+
+            const p1Input = document.getElementById("hostPlayer1Input");
+            const p2Input = document.getElementById("hostPlayer2Input");
+            if (document.activeElement !== p1Input) p1Input.value = gameState.player1Name || "";
+            if (document.activeElement !== p2Input) p2Input.value = gameState.player2Name || "";
+
+            const turnBtn1 = document.getElementById("hostTurnBtn1");
+            const turnBtn2 = document.getElementById("hostTurnBtn2");
+            const turnBtnNeutral = document.getElementById("hostTurnBtnNeutral");
+            const hostTurnStatus = document.getElementById("hostCurrentTurnStatus");
+
+            if (gameState.activeTeam === 1) {
+                turnBtn1.className = "px-3 py-2.5 rounded-xl bg-pink-400 text-slate-950 font-extrabold text-xs transition shrink-0 shadow";
+                turnBtn2.className = "px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-sky-500 text-slate-300 font-bold text-xs transition shrink-0";
+                turnBtnNeutral.className = "w-full py-3 px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 font-show font-bold text-xs transition flex flex-col items-center justify-center gap-1";
+                hostTurnStatus.innerHTML = `Estado: <strong class="text-pink-300">🎯 Turno Oficial en TV: ${gameState.team1Name}</strong>`;
+            } else if (gameState.activeTeam === 2) {
+                turnBtn2.className = "px-3 py-2.5 rounded-xl bg-sky-400 text-slate-950 font-extrabold text-xs transition shrink-0 shadow";
+                turnBtn1.className = "px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-pink-600 text-slate-300 font-bold text-xs transition shrink-0";
+                turnBtnNeutral.className = "w-full py-3 px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 font-show font-bold text-xs transition flex flex-col items-center justify-center gap-1";
+                hostTurnStatus.innerHTML = `Estado: <strong class="text-sky-300">🎯 Turno Oficial en TV: ${gameState.team2Name}</strong>`;
+            } else {
+                turnBtn1.className = "px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-pink-600 text-white font-bold text-xs transition shrink-0";
+                turnBtn2.className = "px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-sky-500 text-white font-bold text-xs transition shrink-0";
+                turnBtnNeutral.className = "w-full py-3 px-3 rounded-2xl bg-amber-400 text-slate-950 border-2 border-white font-show font-extrabold text-xs transition flex flex-col items-center justify-center gap-1 shadow-lg";
+                hostTurnStatus.innerHTML = `Estado: <strong class="text-yellow-300">⚡ Duelo de Botones (Nadie tiene el turno aún)</strong>`;
+            }
+
+            // Host 5 Interactive Cheat Sheet Rows
+            const cheatGrid = document.getElementById("hostCheatSheetGrid");
+            cheatGrid.innerHTML = round.answers.map((ans, idx) => {
+                const isTop = idx === 0;
+                const multipliedPts = Number(ans.points) * (gameState.multiplier || 1);
+                return `
+                <div class="p-3.5 rounded-2xl border-2 transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${ans.revealed ? 'bg-emerald-950/50 border-emerald-500/70' : 'bg-slate-950/90 border-slate-800 hover:border-indigo-500/60'}">
+                    <div class="flex items-start sm:items-center gap-3 min-w-0">
+                        <span class="w-9 h-9 rounded-xl font-show font-extrabold text-base flex items-center justify-center shrink-0 ${ans.revealed ? 'bg-emerald-500 text-slate-950' : 'bg-indigo-600 text-white'}">
+                            #${idx + 1}
+                        </span>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-show font-bold text-base sm:text-lg text-white">
+                                    ${ans.text}
+                                </span>
+                                ${isTop ? `<span class="px-2 py-0.5 rounded-full bg-yellow-400 text-slate-950 font-extrabold text-[11px]">👑 #1 MÁS POPULAR</span>` : ''}
+                                <span class="font-led font-bold text-xs px-2.5 py-0.5 rounded-lg bg-slate-900 text-yellow-300 border border-yellow-500/40">
+                                    ${ans.points} pts (${multipliedPts} con x${gameState.multiplier})
+                                </span>
+                                <span class="text-[11px] font-extrabold uppercase px-2 py-0.5 rounded ${ans.revealed ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}">
+                                    ${ans.revealed ? '✅ YA SALIÓ EN TV' : '🔒 OCULTA EN TV'}
+                                </span>
+                            </div>
+                            <div class="text-xs text-slate-400 mt-1">
+                                <strong>Palabras clave / Sinónimos:</strong> ${(ans.synonyms || []).join(", ")}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+                        ${!ans.revealed ? `
+                            <button onclick="revealSlotFromHost(${idx}, true)" class="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-show font-extrabold text-xs sm:text-sm shadow transition flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-check"></i>
+                                <span>✅ Revelar en TV (+${multipliedPts} pts)</span>
+                            </button>
+                            <button onclick="revealSlotFromHost(${idx}, false)" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold text-xs transition" title="Muestra la respuesta en la TV sin sumar puntos al banco">
+                                👁️ Solo Mostrar (0 pts)
+                            </button>
+                        ` : `
+                            <button onclick="hideSlotFromHost(${idx})" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-rose-950 border border-slate-700 text-slate-300 hover:text-rose-200 font-bold text-xs transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-eye-slash"></i>
+                                <span>Volver a Ocultar en TV</span>
+                            </button>
+                        `}
+                    </div>
+                </div>
+                `;
+            }).join("");
+        }
+
+        // ============================================================================
+        // 8. HOST REMOTE ACTIONS (LIVE PREVIEW, REVEAL, STRIKES, ROUND CONTROLS)
+        // ============================================================================
+        function updateHostTypingPreview(rawText) {
+            const previewEl = document.getElementById("hostLiveTypingPreview");
+            const trimmed = rawText.trim();
+
+            if (!trimmed) {
+                previewEl.className = "bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs sm:text-sm font-semibold text-slate-300 flex items-center gap-2.5";
+                previewEl.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles text-yellow-400 text-base"></i><span>Esperando que escribas una respuesta para previsualizar si está en el tablero...</span>`;
+                return;
+            }
+
+            const round = gameState.rounds[gameState.currentRoundIndex];
+            const matchIdx = findMatchingAnswerIndex(trimmed, round.answers);
+
+            if (matchIdx !== -1) {
+                const matched = round.answers[matchIdx];
+                const pts = Number(matched.points) * (gameState.multiplier || 1);
+                if (matched.revealed) {
+                    previewEl.className = "bg-amber-950/70 border-2 border-amber-400 rounded-2xl p-3 text-xs sm:text-sm font-bold text-amber-200 flex items-center gap-2.5";
+                    previewEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400 text-lg"></i><span>⚠️ Coincide con <strong>#${matchIdx + 1}: ${matched.text}</strong>, pero YA ESTÁ REVELADA en la TV.</span>`;
+                } else {
+                    previewEl.className = "bg-emerald-950/80 border-2 border-emerald-400 rounded-2xl p-3 text-xs sm:text-sm font-bold text-emerald-200 flex items-center gap-2.5";
+                    previewEl.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i><span>✅ ¡SÍ ESTÁ! Coincide con <strong>#${matchIdx + 1}: ${matched.text} (+${pts} pts)</strong> ${matchIdx === 0 ? '👑 #1 MÁS POPULAR' : ''} — Presiona <strong>Enter</strong> para voltear en TV.</span>`;
+                }
+            } else {
+                previewEl.className = "bg-rose-950/80 border-2 border-rose-500 rounded-2xl p-3 text-xs sm:text-sm font-bold text-rose-200 flex items-center gap-2.5";
+                previewEl.innerHTML = `<i class="fa-solid fa-circle-xmark text-rose-400 text-lg"></i><span>❌ "${trimmed}" NO está en la chuleta — Si presionas <strong>Enter</strong> saldrá la ❌ Roja Gigante y chicharra en la TV.</span>`;
+            }
+        }
+
+        function submitHostAnswerCheck(rawText) {
+            const trimmed = rawText.trim();
+            if (!trimmed) return;
+
+            const round = gameState.rounds[gameState.currentRoundIndex];
+            const matchIdx = findMatchingAnswerIndex(trimmed, round.answers);
+
+            if (matchIdx !== -1) {
+                const matched = round.answers[matchIdx];
+                if (matched.revealed) {
+                    showToast(`"${matched.text}" ya estaba volteada en la TV.`, "info");
+                    return;
+                }
+                window.revealSlotFromHost(matchIdx, true);
+            } else {
+                // Trigger Strike on TV!
+                gameState.strikes = Math.min(3, gameState.strikes + 1);
+                publishStateChange({
+                    type: 'STRIKE_X',
+                    count: gameState.strikes,
+                    subtitle: `¡"${trimmed.toUpperCase()}" NO ESTÁ EN EL TABLERO!`
+                });
+            }
+        }
+
+        window.revealSlotFromHost = function(idx, countPoints = true) {
+            const round = gameState.rounds[gameState.currentRoundIndex];
+            if (!round || !round.answers[idx]) return;
+
+            round.answers[idx].revealed = true;
+            round.answers[idx].countPoints = countPoints;
+
+            const isTop = idx === 0;
+            const boardComplete = round.answers.every(a => a.revealed);
+
+            publishStateChange({
+                type: 'REVEAL_ANSWER',
+                slotIndex: idx,
+                isTop,
+                boardComplete
+            });
+        };
+
+        window.hideSlotFromHost = function(idx) {
+            const round = gameState.rounds[gameState.currentRoundIndex];
+            if (!round || !round.answers[idx]) return;
+
+            round.answers[idx].revealed = false;
+            round.answers[idx].countPoints = true;
+            publishStateChange();
+        };
+
+        window.revealAllLeftoversNoPoints = function() {
+            const round = gameState.rounds[gameState.currentRoundIndex];
+            if (!round) return;
+
+            let anyRevealed = false;
+            round.answers.forEach(a => {
+                if (!a.revealed) {
+                    a.revealed = true;
+                    a.countPoints = false; // Do not add leftover points to the round pot
+                    anyRevealed = true;
+                }
+            });
+
+            if (anyRevealed) {
+                publishStateChange({ type: 'DING' });
+                showToast("Sobrantes reveladas en la TV (sin alterar el banco de puntos).", "info");
+            } else {
+                showToast("Todas las respuestas ya estaban reveladas.", "info");
+            }
+        };
+
+        window.triggerManualStrike = function(count) {
+            gameState.strikes = count;
+            publishStateChange({
+                type: 'STRIKE_X',
+                count,
+                subtitle: count >= 3
+                    ? "🚨 ¡3 STRIKES! ¡OPORTUNIDAD DE ROBO PARA EL OTRO EQUIPO! 🚨"
+                    : "¡RESPUESTA INCORRECTA!"
+            });
+        };
+
+        window.triggerQuickErrorBuzzer = function() {
+            publishStateChange({
+                type: 'STRIKE_X',
+                count: 1,
+                subtitle: "¡TIEMPO AGOTADO / RESPUESTA INCORRECTA!"
+            });
+        };
+
+        window.resetStrikes = function() {
+            gameState.strikes = 0;
+            publishStateChange();
+            showToast("Strikes reiniciados a 0.", "info");
+        };
+
+        window.broadcastSoundEffect = function(soundType) {
+            publishStateChange({ type: soundType });
+        };
+
+        window.toggleQuestionVisibilityOnTv = function() {
+            gameState.questionVisible = !gameState.questionVisible;
+            publishStateChange();
+        };
+
+        window.changeRoundByStep = function(delta) {
+            const nextIdx = gameState.currentRoundIndex + delta;
+            if (nextIdx >= 0 && nextIdx < gameState.rounds.length) {
+                gameState.currentRoundIndex = nextIdx;
+                gameState.multiplier = gameState.rounds[nextIdx].multiplier || 1;
+                gameState.strikes = 0;
+                gameState.activeTeam = 0; // Always start each round neutral for the button duel!
+                publishStateChange();
+            }
+        };
+
+        window.setMultiplier = function(mult) {
+            gameState.multiplier = Number(mult) || 1;
+            publishStateChange();
+        };
+
+        window.adjustTeamScore = function(teamNum, delta) {
+            if (teamNum === 1) {
+                gameState.team1Score = Math.max(0, gameState.team1Score + delta);
+            } else {
+                gameState.team2Score = Math.max(0, gameState.team2Score + delta);
+            }
+            publishStateChange();
+        };
+
+        window.setActiveTurn = function(teamNum) {
+            gameState.activeTeam = teamNum; // 0 = Neutral, 1 = Team 1, 2 = Team 2
+            publishStateChange();
+        };
+
+        window.triggerBuzzerWin = function(teamNum) {
+            gameState.activeTeam = teamNum;
+            const teamName = teamNum === 1 ? gameState.team1Name : gameState.team2Name;
+            const playerName = teamNum === 1 ? gameState.player1Name : gameState.player2Name;
+            publishStateChange({
+                type: 'BUZZER_PRESSED',
+                team: teamNum,
+                teamName,
+                playerName
+            });
+        };
+
+        window.awardPotToTeam = function(teamNum) {
+            recalculateRoundPot();
+            if (gameState.roundPot <= 0) {
+                showToast("El banco de la ronda está en 0 puntos.", "info");
+                return;
+            }
+            const pts = gameState.roundPot;
+            let winnerName = "";
+            if (teamNum === 1) {
+                gameState.team1Score += pts;
+                winnerName = gameState.team1Name;
+            } else {
+                gameState.team2Score += pts;
+                winnerName = gameState.team2Name;
+            }
+
+            publishStateChange({
+                type: 'AWARD_POT',
+                message: `¡+${pts} puntos para ${winnerName}! 🎉`
+            });
+        };
+
+        window.resetCurrentRound = function() {
+            const round = gameState.rounds[gameState.currentRoundIndex];
+            if (!round) return;
+            round.answers.forEach(a => {
+                a.revealed = false;
+                a.countPoints = true;
+            });
+            gameState.strikes = 0;
+            gameState.activeTeam = 0; // Reset to neutral button duel
+            publishStateChange();
+            showToast("Ronda reiniciada en modo Duelo de Botones.", "info");
+        };
+
+        // ============================================================================
+        // 9. OVERLAYS, CONFETTI & MODALS
+        // ============================================================================
+        function showBuzzerWinnerOverlay(teamNum, teamName, playerName) {
+            const overlay = document.getElementById("buzzerWinnerOverlay");
+            const card = document.getElementById("buzzerWinnerCard");
+            const title = document.getElementById("buzzerWinnerTitle");
+            const sub = document.getElementById("buzzerWinnerParticipant");
+
+            if (teamNum === 1) {
+                card.className = "max-w-2xl w-full rounded-3xl p-8 border-4 border-pink-300 bg-gradient-to-b from-pink-900/95 to-slate-950 text-center shadow-[0_0_70px_rgba(244,114,182,0.95)]";
+            } else {
+                card.className = "max-w-2xl w-full rounded-3xl p-8 border-4 border-sky-300 bg-gradient-to-b from-sky-900/95 to-slate-950 text-center shadow-[0_0_70px_rgba(56,189,248,0.95)]";
+            }
+
+            title.textContent = `¡APRETÓ PRIMERO: ${teamName.toUpperCase()}!`;
+            sub.textContent = playerName
+                ? `🎤 Turno para responder de: ${playerName}`
+                : `🎯 ¡Tiene el turno para dar la primera respuesta!`;
+
+            overlay.classList.remove("hidden");
+            overlay.classList.add("flex");
+
+            setTimeout(() => {
+                overlay.classList.add("hidden");
+                overlay.classList.remove("flex");
+            }, 2400);
+        }
+
+        function showGiantStrikeOverlay(count = 1, subtitle = "¡RESPUESTA INCORRECTA!") {
+            playBuzzerSound();
+
+            const overlay = document.getElementById("strikeOverlay");
+            const container = document.getElementById("strikeBoxesContainer");
+            const subEl = document.getElementById("strikeOverlaySubtitle");
+            const mainStage = document.getElementById("mainStageContainer");
+
+            if (mainStage) {
+                mainStage.classList.remove("shake-active");
+                void mainStage.offsetWidth;
+                mainStage.classList.add("shake-active");
+            }
+
+            subEl.textContent = subtitle;
+
+            let boxesHtml = "";
+            for (let i = 0; i < count; i++) {
+                boxesHtml += `
+                    <div class="strike-x-box w-36 h-36 sm:w-48 sm:h-48 md:w-56 md:h-56 rounded-3xl flex items-center justify-center select-none">
+                        <span class="font-show font-black text-red-500 text-8xl sm:text-9xl drop-shadow-[0_0_25px_rgba(255,255,255,0.6)]">
+                            ✕
+                        </span>
+                    </div>
+                `;
+            }
+            container.innerHTML = boxesHtml;
+            overlay.classList.remove("hidden");
+            overlay.classList.add("flex");
+
+            setTimeout(() => {
+                overlay.classList.add("hidden");
+                overlay.classList.remove("flex");
+            }, 1550);
+        }
+
+        function showTopAnswerCelebration() {
+            const banner = document.getElementById("topAnswerBanner");
+            banner.classList.remove("hidden");
+            setTimeout(() => {
+                banner.classList.add("hidden");
+            }, 2800);
+        }
+
+        function showToast(msg, type = "info") {
+            const toast = document.getElementById("toastMessage");
+            const text = document.getElementById("toastText");
+            const icon = document.getElementById("toastIcon");
+
+            text.textContent = msg;
+            icon.className = type === "success"
+                ? "fa-solid fa-circle-check text-emerald-400 text-xl"
+                : "fa-solid fa-circle-info text-yellow-400 text-xl";
+
+            toast.classList.remove("hidden");
+            setTimeout(() => {
+                toast.classList.add("hidden");
+            }, 3000);
+        }
+
+        function launchConfetti() {
+            const canvas = document.getElementById("confettiCanvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const colors = ["#f472b6", "#38bdf8", "#facc15", "#a78bfa", "#34d399", "#ffffff"];
+            const pieces = Array.from({ length: 110 }, () => ({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height - canvas.height,
+                r: Math.random() * 6 + 4,
+                dx: (Math.random() - 0.5) * 4,
+                dy: Math.random() * 4 + 3,
+                color: colors[Math.floor(Math.random() * colors.length)]
+            }));
+
+            let frame = 0;
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                pieces.forEach(p => {
+                    ctx.beginPath();
+                    ctx.fillStyle = p.color;
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fill();
+                    p.x += p.dx;
+                    p.y += p.dy;
+                });
+                frame++;
+                if (frame < 130) {
+                    requestAnimationFrame(draw);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+            draw();
+        }
+
+        // Cloud & Room Config Modal Functions
+        window.openCloudModal = function() {
+            document.getElementById("roomCodeInput").value = roomCode;
+            const modal = document.getElementById("cloudConfigModal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        };
+
+        window.closeCloudModal = function() {
+            const modal = document.getElementById("cloudConfigModal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        };
+
+        window.copyPresenterLink = function() {
+            const linkUrl = new URL(window.location.href);
+            linkUrl.searchParams.set('vista', 'presentador');
+            linkUrl.searchParams.set('sala', roomCode);
+
+            const tempInput = document.createElement("textarea");
+            tempInput.value = linkUrl.toString();
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            tempInput.remove();
+
+            showToast("¡Link del Panel del Presentador copiado al portapapeles!", "success");
+        };
+
+        window.saveCloudAndRoomSettings = async function() {
+            const newRoom = document.getElementById("roomCodeInput").value.trim().toUpperCase() || "BABY-SHOWER";
+            roomCode = newRoom;
+            document.getElementById("roomCodeBadge").textContent = `Sala: ${roomCode}`;
+
+            const rawConfig = document.getElementById("customFirebaseConfigInput").value.trim();
+            if (rawConfig) {
+                try {
+                    const parsedConfig = JSON.parse(rawConfig);
+                    await initFirebaseSync(parsedConfig);
+                    showToast(`Conectado a Firebase en Sala ${roomCode}`, "success");
+                } catch (e) {
+                    showToast("El JSON de firebaseConfig no tiene formato válido.", "info");
+        window.saveCloudAndRoomSettings = function() {
+            const newRoom = document.getElementById("roomCodeInput").value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, "") || "BABY-2026";
+            roomCode = newRoom;
+            localStorage.setItem("papis_room_code", roomCode);
+            document.getElementById("roomCodeBadge").textContent = `Sala: ${roomCode}`;
+
+            initLocalAndCloudSync();
+            showToast(`Conectado a la Sala ${roomCode}`, "success");
+            window.closeCloudModal();
+        };
+
+        // Question Editor Modal Functions
+        let editingRoundIndex = 0;
+
+        window.openQuestionEditor = function() {
+            editingRoundIndex = gameState.currentRoundIndex;
+            populateEditorModal();
+            const modal = document.getElementById("editorModal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        };
+
+        function populateEditorModal() {
+            const select = document.getElementById("editorRoundSelect");
+            select.innerHTML = gameState.rounds.map((r, i) =>
+                `<option value="${i}" ${i === editingRoundIndex ? 'selected' : ''}>Ronda ${i + 1}: ${r.question.slice(0, 42)}...</option>`
+            ).join("");
+
+            const round = gameState.rounds[editingRoundIndex];
+            document.getElementById("editQuestionText").value = round.question;
+            document.getElementById("editRoundMultiplier").value = round.multiplier || 1;
+
+            const container = document.getElementById("editorAnswersContainer");
+            container.innerHTML = round.answers.map((ans, idx) =>
+                createEditorAnswerRowHtml(idx, ans.text, ans.points, (ans.synonyms || []).join(", "))
+            ).join("");
+        }
+
+        function createEditorAnswerRowHtml(idx, text = "", points = 10, synonyms = "") {
+            return `
+                <div class="editor-answer-row grid grid-cols-1 sm:grid-cols-12 gap-2 bg-slate-950 p-3 rounded-2xl border border-slate-800 items-center">
+                    <div class="sm:col-span-1 font-show font-bold text-yellow-400 text-center">
+                        #${idx + 1}
+                    </div>
+                    <div class="sm:col-span-4">
+                        <input type="text" placeholder="Respuesta oficial" value="${text}" class="edit-ans-text w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm text-white font-semibold" />
+                    </div>
+                    <div class="sm:col-span-2">
+                        <input type="number" placeholder="Puntos" value="${points}" class="edit-ans-pts w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm text-yellow-300 font-bold text-center" />
+                    </div>
+                    <div class="sm:col-span-4">
+                        <input type="text" placeholder="Sinónimos separados por coma" value="${synonyms}" class="edit-ans-syn w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-300" />
+                    </div>
+                    <div class="sm:col-span-1 text-right">
+                        <button type="button" onclick="this.closest('.editor-answer-row').remove()" class="text-rose-400 hover:text-rose-300 p-1.5">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function saveCurrentEditorRound() {
+            const round = gameState.rounds[editingRoundIndex];
+            if (!round) return;
+
+            round.question = document.getElementById("editQuestionText").value.trim() || "Pregunta de Baby Shower";
+            round.multiplier = Number(document.getElementById("editRoundMultiplier").value) || 1;
+
+            const rows = document.querySelectorAll(".editor-answer-row");
+            const updatedAnswers = [];
+            rows.forEach(row => {
+                const text = row.querySelector(".edit-ans-text").value.trim();
+                const points = Number(row.querySelector(".edit-ans-pts").value) || 10;
+                const synRaw = row.querySelector(".edit-ans-syn").value;
+                const synonyms = synRaw.split(",").map(s => s.trim()).filter(Boolean);
+                if (text) {
+                    updatedAnswers.push({ text, points, synonyms, revealed: false, countPoints: true });
+                }
+            });
+
+            if (updatedAnswers.length > 0) {
+                round.answers = updatedAnswers;
+            }
+            if (editingRoundIndex === gameState.currentRoundIndex) {
+                gameState.multiplier = round.multiplier;
+            }
+
+            publishStateChange();
+            showToast("¡Preguntas actualizadas y sincronizadas!", "success");
+        }
+
+        // ============================================================================
+        // 10. INITIALIZATION & EVENT LISTENERS
+        // ============================================================================
+        window.addEventListener("DOMContentLoaded", () => {
+            // If user opened root URL without `?vista=`, show the Mode Selector Modal
+            if (!initialViewParam) {
+                const modal = document.getElementById("modeSelectorModal");
+                modal.classList.remove("hidden");
+                modal.classList.add("flex");
+            }
+
+            renderAll();
+            initLocalAndCloudSync();
+
+            // Host Live Search Input & Form
+            const hostForm = document.getElementById("hostAnswerCheckForm");
+            const hostInput = document.getElementById("hostGuestAnswerInput");
+
+            hostInput.addEventListener("input", (e) => {
+                updateHostTypingPreview(e.target.value);
+            });
+
+            hostForm.addEventListener("submit", (e) => {
+                e.preventDefault();
+                submitHostAnswerCheck(hostInput.value);
+                hostInput.value = "";
+                updateHostTypingPreview("");
+                hostInput.focus();
+            });
+
+            document.getElementById("hostClearInputBtn").addEventListener("click", () => {
+                hostInput.value = "";
+                updateHostTypingPreview("");
+                hostInput.focus();
+            });
+
+            // Host Round Selector
+            document.getElementById("hostRoundSelect").addEventListener("change", (e) => {
+                const idx = Number(e.target.value);
+                gameState.currentRoundIndex = idx;
+                gameState.multiplier = gameState.rounds[idx].multiplier || 1;
+                gameState.strikes = 0;
+                gameState.activeTeam = 0; // Neutral turn on new round
+                publishStateChange();
+            });
+
+            // Participant 1 & 2 Name Inputs for Button Duel
+            document.getElementById("hostPlayer1Input").addEventListener("input", (e) => {
+                gameState.player1Name = e.target.value.trim();
+                publishStateChange();
+            });
+            document.getElementById("hostPlayer2Input").addEventListener("input", (e) => {
+                gameState.player2Name = e.target.value.trim();
+                publishStateChange();
+            });
+
+            // Team Name Edits (from either TV or Host Panel)
+            const syncTeam1Name = (e) => {
+                gameState.team1Name = e.target.value.trim() || "Equipo Mamá 💖";
+                publishStateChange();
+            };
+            const syncTeam2Name = (e) => {
+                gameState.team2Name = e.target.value.trim() || "Equipo Papá 💙";
+                publishStateChange();
+            };
+
+            document.getElementById("tvTeam1NameInput").addEventListener("change", syncTeam1Name);
+            document.getElementById("tvTeam2NameInput").addEventListener("change", syncTeam2Name);
+            document.getElementById("hostTeam1NameInput").addEventListener("change", syncTeam1Name);
+            document.getElementById("hostTeam2NameInput").addEventListener("change", syncTeam2Name);
+
+            // Audio Mute / Unlock Button
+            document.getElementById("muteToggleBtn").addEventListener("click", () => {
+                getAudioContext();
+                soundMuted = !soundMuted;
+                const icon = document.getElementById("muteIcon");
+                const label = document.getElementById("audioBtnLabel");
+                if (soundMuted) {
+                    icon.className = "fa-solid fa-volume-xmark text-rose-400";
+                    label.textContent = "Silenciado";
+                } else {
+                    icon.className = "fa-solid fa-volume-high text-yellow-400";
+                    label.textContent = "Audio Activo";
+                    playDingSound(false);
+                }
+            });
+
+            // Question Editor Listeners
+            document.getElementById("closeEditorBtn").addEventListener("click", () => {
+                document.getElementById("editorModal").classList.add("hidden");
+                document.getElementById("editorModal").classList.remove("flex");
+            });
+            document.getElementById("cancelEditorBtn").addEventListener("click", () => {
+                document.getElementById("editorModal").classList.add("hidden");
+                document.getElementById("editorModal").classList.remove("flex");
+            });
+
+            document.getElementById("editorRoundSelect").addEventListener("change", (e) => {
+                saveCurrentEditorRound();
+                editingRoundIndex = Number(e.target.value);
+                populateEditorModal();
+            });
+
+            document.getElementById("addAnswerRowBtn").addEventListener("click", () => {
+                const container = document.getElementById("editorAnswersContainer");
+                const nextIdx = container.querySelectorAll(".editor-answer-row").length;
+                container.insertAdjacentHTML("beforeend", createEditorAnswerRowHtml(nextIdx, "", 10, ""));
+            });
+
+            document.getElementById("addNewRoundBtn").addEventListener("click", () => {
+                saveCurrentEditorRound();
+                gameState.rounds.push({
+                    id: Date.now(),
+                    question: "¿Nueva pregunta para el Baby Shower?",
+                    multiplier: 1,
+                    answers: [
+                        { text: "Respuesta 1", points: 40, synonyms: ["opcion 1"], revealed: false, countPoints: true },
+                        { text: "Respuesta 2", points: 25, synonyms: ["opcion 2"], revealed: false, countPoints: true },
+                        { text: "Respuesta 3", points: 18, synonyms: ["opcion 3"], revealed: false, countPoints: true },
+                        { text: "Respuesta 4", points: 10, synonyms: ["opcion 4"], revealed: false, countPoints: true },
+                        { text: "Respuesta 5", points: 7, synonyms: ["opcion 5"], revealed: false, countPoints: true }
+                    ]
+                });
+                editingRoundIndex = gameState.rounds.length - 1;
+                populateEditorModal();
+            });
+
+            document.getElementById("saveEditorBtn").addEventListener("click", () => {
+                saveCurrentEditorRound();
+                document.getElementById("editorModal").classList.add("hidden");
+                document.getElementById("editorModal").classList.remove("flex");
+            });
+
+            document.getElementById("restoreDefaultsBtn").addEventListener("click", () => {
+                gameState.rounds = JSON.parse(JSON.stringify(DEFAULT_ROUNDS)).map(r => ({
+                    ...r,
+                    answers: r.answers.map(a => ({ ...a, revealed: false, countPoints: true }))
+                }));
+                gameState.currentRoundIndex = 0;
+                editingRoundIndex = 0;
+                populateEditorModal();
+                publishStateChange();
+                showToast("Se restauraron las 10 rondas originales.", "info");
+            });
+
+            document.getElementById("resetTotalGameBtn").addEventListener("click", () => {
+                gameState.team1Score = 0;
+                gameState.team2Score = 0;
+                gameState.strikes = 0;
+                gameState.rounds.forEach(r => r.answers.forEach(a => {
+                    a.revealed = false;
+                    a.countPoints = true;
+                }));
+                publishStateChange();
+                showToast("Marcadores y rondas reiniciados a cero.", "info");
+            });
+
+            document.getElementById("exportJsonBtn").addEventListener("click", () => {
+                saveCurrentEditorRound();
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(gameState.rounds, null, 2));
+                const dlAnchor = document.createElement("a");
+                dlAnchor.setAttribute("href", dataStr);
+                dlAnchor.setAttribute("download", "preguntas_100_papis_dijeron.json");
+                document.body.appendChild(dlAnchor);
+                dlAnchor.click();
+                dlAnchor.remove();
+            });
+        });
+    </script>
+</body>
+</html>
